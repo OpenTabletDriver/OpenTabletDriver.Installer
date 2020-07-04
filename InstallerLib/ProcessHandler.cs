@@ -14,6 +14,7 @@ namespace InstallerLib
 
         public FileInfo BinaryFile { private set; get; }
         public Process Process { private set; get; }
+        public bool IsRunning { private set; get; }
         public event EventHandler<int> Exited;
 
         public Dictionary<DateTime, string> Log { private set; get; } = new Dictionary<DateTime, string>();
@@ -25,17 +26,28 @@ namespace InstallerLib
             {
                 StartInfo = new ProcessStartInfo
                 {
-                    Arguments = string.Join(' ', args),                    
+                    FileName = BinaryFile.FullName,
+                    Arguments = string.Join(' ', args),
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
                 }
             };
             Process.OutputDataReceived += (s, e) => Log.Add(DateTime.Now, e.Data);
             Process.ErrorDataReceived += (s, e) => Log.Add(DateTime.Now, e.Data);
-            Process.Exited += (s, e) => Exited?.Invoke(this, Process.ExitCode);
+            Process.Exited += (s, e) => 
+            {
+                Exited?.Invoke(this, Process.ExitCode);
+                IsRunning = false;
+            };
+            Process.Start();
+            Process.BeginOutputReadLine();
+            Process.BeginErrorReadLine();
+            IsRunning = true;
         }
 
         public void Stop()
         {
-            Process.Close();
+            Process.Kill();
         }
     }
 }

@@ -1,14 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace InstallerLib
 {
     public class Launcher
     {
-        public Launcher(DirectoryInfo installationDirectory)
+        public Launcher(DirectoryInfo installationDirectory, DirectoryInfo configurationDirectory = null)
         {
             InstallationDirectory = installationDirectory;
+            ConfigurationDirectory = configurationDirectory;
+            
+            AppArgs = new string[0];
         }
 
         private static string DaemonName => "OpenTabletDriver.Daemon";
@@ -31,46 +35,66 @@ namespace InstallerLib
             }
         }
 
-        private ProcessHandler DaemonProcess { set; get; }
-        private ProcessHandler AppProcess { set; get; }
+        public ProcessHandler DaemonProcess { private set; get; }
+        public string[] DaemonArgs { private set; get; }
+        
+        public ProcessHandler AppProcess { private set; get; }
+        public string[] AppArgs { private set; get;}
 
         public DirectoryInfo InstallationDirectory { private set; get; }
+        
+        private DirectoryInfo _configDir;
+        public DirectoryInfo ConfigurationDirectory
+        {
+            set => _configDir = value;
+            get => _configDir ?? new DirectoryInfo(Path.Join(InstallationDirectory.FullName, "OpenTabletDriver.Daemon", "Configurations"));
+        }
 
         public void StartDaemon(params string[] args)
         {
-            if (DaemonProcess == null)
+            if (DaemonProcess == null || !DaemonProcess.IsRunning)
             {
                 var daemonBinPath = Path.Join(
                     InstallationDirectory.FullName,
                     $"{DaemonName}/{DaemonName}{Platform.ExecutableFileExtension}");
                 var daemonBin = new FileInfo(daemonBinPath);
+                
+                DaemonArgs = new string[]
+                {
+                    "-c",
+                    ConfigurationDirectory.FullName
+                };
+
                 DaemonProcess = new ProcessHandler(daemonBin);
-                DaemonProcess.Start(args);
+                DaemonProcess.Start(DaemonArgs.Union(args).ToArray());
             }
         }
 
         public void StopDaemon()
         {
-            if (DaemonProcess != null)
+            if (DaemonProcess != null || DaemonProcess.IsRunning)
                 DaemonProcess.Stop();
         }
 
-        public void StartFrontend(params string[] args)
+        public void StartApp(params string[] args)
         {
-            if (AppProcess == null)
+            if (AppProcess == null || !AppProcess.IsRunning)
             {
                 var appBinPath = Path.Join(
                     InstallationDirectory.FullName,
                     $"{AppName}/{AppName}{Platform.ExecutableFileExtension}");
                 var appBin = new FileInfo(appBinPath);
+
+                AppArgs = new string[0];
+
                 AppProcess = new ProcessHandler(appBin);
-                AppProcess.Start(args);
+                AppProcess.Start(AppArgs.Union(args).ToArray());
             }
         }
 
-        public void StopFrontend()
+        public void StopApp()
         {
-            if (AppProcess != null)
+            if (AppProcess != null || AppProcess.IsRunning)
                 AppProcess.Stop();
         }
     }
