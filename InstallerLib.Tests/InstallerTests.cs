@@ -11,10 +11,10 @@ namespace InstallerLib.Tests
     {
         public InstallerTests()
         {
-            Installer = new Installer(InstallationDirectory);
+            Installer = new AppInstaller(InstallationDirectory);
         }
 
-        private Installer Installer { set; get; }
+        private AppInstaller Installer { set; get; }
         private readonly DirectoryInfo InstallationDirectory = new DirectoryInfo(Path.Join(Directory.GetCurrentDirectory(), "test"));
 
         [TestMethod]
