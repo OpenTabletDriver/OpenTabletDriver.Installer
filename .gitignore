@@ -1,0 +1,6 @@
+**/bin/
+**/obj/
+**/nupkg/
+.vscode/
+build/
+test/
