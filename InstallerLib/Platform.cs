@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
 using System.Runtime.InteropServices;
 
 namespace InstallerLib
@@ -35,6 +37,29 @@ namespace InstallerLib
                     default:
                         return "";
                 }
+            }
+        }
+
+        public static void Open(FileSystemInfo fsinfo) => Open(fsinfo.FullName);
+
+        public static void Open(string path)
+        {
+            switch (ActivePlatform)
+            {
+                case RuntimePlatform.Windows:
+                    var startInfo = new ProcessStartInfo("cmd", $"/c start {path.Replace("&", "^&")}")
+                    {
+                        CreateNoWindow = true
+                    };
+                    Process.Start(startInfo);
+                    break;
+                case RuntimePlatform.Linux:
+                    Process.Start("xdg-open", path);
+                    break;
+                case RuntimePlatform.MacOS:
+                case RuntimePlatform.FreeBSD:
+                    Process.Start("open", path);
+                    break;
             }
         }
     }

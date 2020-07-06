@@ -2,6 +2,7 @@ using System;
 using Eto.Forms;
 using Eto.Drawing;
 using System.Threading.Tasks;
+using System.Timers;
 
 namespace OpenTabletDriver.Installer
 {
@@ -31,7 +32,13 @@ namespace OpenTabletDriver.Installer
 				await UpdateInstallInfo(updateStatus, installCommand, uninstallCommand);
 			};
 
-						var quitCommand = new Command { MenuText = "Quit", Shortcut = Application.Instance.CommonModifier | Keys.Q };
+			var startCommand = new Command { MenuText = "Start", ToolBarText = "Start", Shortcut = Application.Instance.CommonModifier | Keys.Enter };
+			startCommand.Executed += (sender, e) => StartDriver();
+
+			var showFolder = new Command { MenuText = "Show install folder...", ToolBarText = "Show install folder" };
+			showFolder.Executed += (sender, e) => InstallerLib.Platform.Open(App.Current.InstallationDirectory);
+
+			var quitCommand = new Command { MenuText = "Quit", Shortcut = Application.Instance.CommonModifier | Keys.Q };
 			quitCommand.Executed += (sender, e) => Application.Instance.Quit();
 
 			this.PreLoad += async (sender, e) => await UpdateInstallInfo(updateStatus, installCommand, uninstallCommand);
@@ -62,6 +69,7 @@ namespace OpenTabletDriver.Installer
 						Text = "&File",
 						Items =
 						{
+							showFolder
 						}
 					},
 				},
@@ -78,7 +86,8 @@ namespace OpenTabletDriver.Installer
 				Items =
 				{
 					installCommand,
-					uninstallCommand
+					uninstallCommand,
+					startCommand
 				}
 			};
 		}
@@ -107,7 +116,9 @@ namespace OpenTabletDriver.Installer
 					}
 				}
 			};
-			if (App.Current.Installer.IsInstalled && await App.Current.Installer.CheckForUpdate())
+
+			var updateAvailable = await App.Current.Installer.CheckForUpdate();
+			if (App.Current.Installer.IsInstalled && updateAvailable)
 			{
 				var updateBox = new StackLayoutItem
 				{
@@ -121,6 +132,40 @@ namespace OpenTabletDriver.Installer
 			uninstallCommand.Enabled = App.Current.Installer.IsInstalled;
 
 			view.Content = control;
+
+			if (App.Current.Installer.IsInstalled && !updateAvailable)
+				StartDriver();
+		}
+
+		public void Hide()
+		{
+			this.Minimize();
+			this.ShowInTaskbar = false;
+		}
+
+		public void Unhide()
+		{
+			this.BringToFront();
+			this.ShowInTaskbar = true;
+		}
+
+		private void StartDriver()
+		{
+			Hide();
+			App.Current.Launcher.StartDaemon();
+			App.Current.Launcher.StartApp();
+			var watchdog = new Timer(TimeSpan.FromSeconds(1).TotalMilliseconds);
+			watchdog.Elapsed += (sender, e) => 
+			{
+				if (App.Current.Launcher.AppProcess.Process.HasExited)
+				{
+					App.Current.Launcher.DaemonProcess.Stop();
+					watchdog.Stop();
+					watchdog.Dispose();
+					Unhide();
+				}
+			};
+			watchdog.Start();
 		}
 	}
 }
