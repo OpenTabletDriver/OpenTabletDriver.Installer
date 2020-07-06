@@ -45,9 +45,9 @@ namespace InstallerLib
                     {
                         // Download zip to temporary file to extract from
                         await httpStream.CopyToAsync(fileStream);
-                        // Extract to directory
-                        ZipFile.ExtractToDirectory(file.FullName, InstallationDirectory.FullName);
                     }
+                    // Extract to directory
+                    ZipFile.ExtractToDirectory(file.FullName, InstallationDirectory.FullName);
                     // Clean up files
                     file.Delete();
                 }
