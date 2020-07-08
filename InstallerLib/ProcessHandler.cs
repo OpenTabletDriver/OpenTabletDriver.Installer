@@ -32,8 +32,8 @@ namespace InstallerLib
                     RedirectStandardError = true
                 }
             };
-            Process.OutputDataReceived += (s, e) => Log.Add(DateTime.Now, e.Data);
-            Process.ErrorDataReceived += (s, e) => Log.Add(DateTime.Now, e.Data);
+            Process.OutputDataReceived += (s, e) => Log.Add(DateTime.Now, e?.Data);
+            Process.ErrorDataReceived += (s, e) => Log.Add(DateTime.Now, e?.Data);
             Process.Exited += (s, e) => 
             {
                 Exited?.Invoke(this, Process.ExitCode);

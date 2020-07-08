@@ -3,6 +3,7 @@ using Eto.Forms;
 using Eto.Drawing;
 using System.Threading.Tasks;
 using System.Timers;
+using InstallerLib;
 
 namespace OpenTabletDriver.Installer
 {
@@ -12,28 +13,14 @@ namespace OpenTabletDriver.Installer
 		{
 			Title = "OpenTabletDriver Updater";
 			ClientSize = new Size(400, 350);
+			Icon = App.Current.Logo.WithSize(App.Current.Logo.Size);
 
-			var updateStatus = new Panel()
+			Hide();
+
+			var status = new Panel()
 			{
 				Padding = 10
 			};
-			
-			var installCommand = new Command { MenuText = "Install", ToolBarText = "Install", Shortcut = Application.Instance.CommonModifier | Keys.I };
-			var uninstallCommand = new Command { MenuText = "Uninstall", ToolBarText = "Uninstall", Shortcut = Application.Instance.CommonModifier | Keys.I };
-
-			installCommand.Executed += async (sender, e) => 
-			{
-				await App.Current.Installer.InstallBinaries();
-				await UpdateInstallInfo(updateStatus, installCommand, uninstallCommand);
-			};
-			uninstallCommand.Executed += async (sender, e) =>
-			{
-				await App.Current.Installer.DeleteBinaries();
-				await UpdateInstallInfo(updateStatus, installCommand, uninstallCommand);
-			};
-
-			var startCommand = new Command { MenuText = "Start", ToolBarText = "Start", Shortcut = Application.Instance.CommonModifier | Keys.Enter };
-			startCommand.Executed += (sender, e) => StartDriver();
 
 			var showFolder = new Command { MenuText = "Show install folder...", ToolBarText = "Show install folder" };
 			showFolder.Executed += (sender, e) => InstallerLib.Platform.Open(App.Current.InstallationDirectory);
@@ -41,20 +28,48 @@ namespace OpenTabletDriver.Installer
 			var quitCommand = new Command { MenuText = "Quit", Shortcut = Application.Instance.CommonModifier | Keys.Q };
 			quitCommand.Executed += (sender, e) => Application.Instance.Quit();
 
-			this.PreLoad += async (sender, e) => await UpdateInstallInfo(updateStatus, installCommand, uninstallCommand);
+			var installButton = new Button
+			{
+				Text = "Install"
+			};
+			installButton.Click += toggleInstallState;
 
-			Content = new TableLayout
+			var buttonPanel = new StackLayout
+			{
+				Orientation = Orientation.Horizontal,
+				VerticalContentAlignment = VerticalAlignment.Center,
+				HorizontalContentAlignment = HorizontalAlignment.Center,
+				Spacing = 5,
+				Padding = 5,
+				Items = 
+				{
+					installButton,
+					new Button((sender, e) => StartDriver())
+					{
+						Text = "Start"
+					}
+				}
+			};
+
+			async Task updateInfoView() => await UpdateInstallInfo(status, installButton);
+			async void toggleInstallState(object sender, EventArgs e)
+			{
+                if (!App.Current.Installer.IsInstalled)
+					await App.Current.Installer.InstallBinaries();
+                else
+					await App.Current.Installer.DeleteBinaries();
+				await updateInfoView();
+            }
+
+			this.PreLoad += async (sender, e) => await updateInfoView();
+
+			Content = new StackLayout
 			{
 				Padding = 10,
-				Rows =
+				Items = 
 				{
-					new TableRow
-					{
-						Cells =
-						{
-							new TableCell(updateStatus, true)
-						}
-					}
+					new StackLayoutItem(buttonPanel, HorizontalAlignment.Center),
+					new StackLayoutItem(status, HorizontalAlignment.Center)
 				}
 			};
 
@@ -80,19 +95,10 @@ namespace OpenTabletDriver.Installer
 				QuitItem = quitCommand
 			};
 
-			// create toolbar
-			ToolBar = new ToolBar
-			{
-				Items =
-				{
-					installCommand,
-					uninstallCommand,
-					startCommand
-				}
-			};
+			Unhide();
 		}
 
-		private async Task UpdateInstallInfo(Panel view, Command installCommand, Command uninstallCommand)
+		private async Task UpdateInstallInfo(Panel view, Button installButton)
 		{
 			var control = new StackLayout
 			{
@@ -127,11 +133,21 @@ namespace OpenTabletDriver.Installer
 				};
 				control.Items.Add(updateBox);
 			}
-			
-			installCommand.Enabled = !App.Current.Installer.IsInstalled;
-			uninstallCommand.Enabled = App.Current.Installer.IsInstalled;
 
+			using (var fs = App.Current.Installer.VersionInfoFile.OpenRead())
+			{
+				var ver = VersionInfo.Deserialize(fs);
+				var versionCtrl = new StackLayoutItem
+				{
+					Control = ver.InstalledVersion,
+					HorizontalAlignment = HorizontalAlignment.Center
+				};
+				control.Items.Add(versionCtrl);
+			}
+			
 			view.Content = control;
+
+			installButton.Text = App.Current.Installer.IsInstalled ? "Uninstall" : "Install";
 
 			if (App.Current.Installer.IsInstalled && !updateAvailable)
 				StartDriver();

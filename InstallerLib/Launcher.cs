@@ -73,7 +73,10 @@ namespace InstallerLib
         public void StopDaemon()
         {
             if (DaemonProcess != null || DaemonProcess.IsRunning)
+            {
                 DaemonProcess.Stop();
+                DaemonProcess = null;
+            }
         }
 
         public void StartApp(params string[] args)
@@ -95,7 +98,10 @@ namespace InstallerLib
         public void StopApp()
         {
             if (AppProcess != null || AppProcess.IsRunning)
+            {
                 AppProcess.Stop();
+                AppProcess = null;
+            }
         }
     }
 }
