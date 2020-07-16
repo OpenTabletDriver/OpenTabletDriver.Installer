@@ -32,6 +32,14 @@ namespace OpenTabletDriver.Installer
 			{
 				Text = "Install"
 			};
+			
+			var updateButton = new Button
+			{
+				Text = "Update",
+				Visible = false
+			};
+			updateButton.Click += updateInstall;
+
 			installButton.Click += toggleInstallState;
 
 			var buttonPanel = new StackLayout
@@ -44,6 +52,7 @@ namespace OpenTabletDriver.Installer
 				Items = 
 				{
 					installButton,
+					updateButton,
 					new Button((sender, e) => StartDriver())
 					{
 						Text = "Start"
@@ -51,15 +60,24 @@ namespace OpenTabletDriver.Installer
 				}
 			};
 
-			async Task updateInfoView() => await UpdateInstallInfo(status, installButton);
+			async Task updateInfoView(bool triggerStart = true) => await UpdateInstallInfo(status, installButton, updateButton, triggerStart);
 			async void toggleInstallState(object sender, EventArgs e)
 			{
                 if (!App.Current.Installer.IsInstalled)
 					await App.Current.Installer.InstallBinaries();
                 else
 					await App.Current.Installer.DeleteBinaries();
-				await updateInfoView();
+				await updateInfoView(false);
             }
+
+			async void updateInstall(object sender, EventArgs e)
+			{
+				if (App.Current.Installer.IsInstalled)
+					await App.Current.Installer.DeleteBinaries();
+
+				await App.Current.Installer.InstallBinaries();
+				await updateInfoView(false);
+			}
 
 			this.PreLoad += async (sender, e) => await updateInfoView();
 
@@ -98,7 +116,7 @@ namespace OpenTabletDriver.Installer
 			Unhide();
 		}
 
-		private async Task UpdateInstallInfo(Panel view, Button installButton)
+		private async Task UpdateInstallInfo(Panel view, Button installButton, Button updateButton, bool triggerStart = true)
 		{
 			var control = new StackLayout
 			{
@@ -132,6 +150,12 @@ namespace OpenTabletDriver.Installer
 					HorizontalAlignment = HorizontalAlignment.Center
 				};
 				control.Items.Add(updateBox);
+
+				updateButton.Visible = true;
+			}
+			else
+			{
+				updateButton.Visible = false;
 			}
 
 			if (App.Current.Installer.VersionInfoFile.Exists)
@@ -152,7 +176,7 @@ namespace OpenTabletDriver.Installer
 
 			installButton.Text = App.Current.Installer.IsInstalled ? "Uninstall" : "Install";
 
-			if (App.Current.Installer.IsInstalled && !updateAvailable)
+			if (App.Current.Installer.IsInstalled && !updateAvailable && triggerStart)
 				StartDriver();
 		}
 
