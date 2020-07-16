@@ -134,15 +134,18 @@ namespace OpenTabletDriver.Installer
 				control.Items.Add(updateBox);
 			}
 
-			using (var fs = App.Current.Installer.VersionInfoFile.OpenRead())
+			if (App.Current.Installer.VersionInfoFile.Exists)
 			{
-				var ver = VersionInfo.Deserialize(fs);
-				var versionCtrl = new StackLayoutItem
+				using (var fs = App.Current.Installer.VersionInfoFile.OpenRead())
 				{
-					Control = ver.InstalledVersion,
-					HorizontalAlignment = HorizontalAlignment.Center
-				};
-				control.Items.Add(versionCtrl);
+					var ver = VersionInfo.Deserialize(fs);
+					var versionCtrl = new StackLayoutItem
+					{
+						Control = ver.InstalledVersion,
+						HorizontalAlignment = HorizontalAlignment.Center
+					};
+					control.Items.Add(versionCtrl);
+				}
 			}
 			
 			view.Content = control;
