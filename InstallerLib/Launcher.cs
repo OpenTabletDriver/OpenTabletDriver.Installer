@@ -47,7 +47,7 @@ namespace InstallerLib
         public DirectoryInfo ConfigurationDirectory
         {
             set => _configDir = value;
-            get => _configDir ?? new DirectoryInfo(Path.Join(InstallationDirectory.FullName, "OpenTabletDriver.Daemon", "Configurations"));
+            get => _configDir ?? new DirectoryInfo(Path.Join(InstallationDirectory.FullName, "Configurations"));
         }
 
         public void StartDaemon(params string[] args)
@@ -56,7 +56,7 @@ namespace InstallerLib
             {
                 var daemonBinPath = Path.Join(
                     InstallationDirectory.FullName,
-                    $"{DaemonName}/{DaemonName}{Platform.ExecutableFileExtension}");
+                    $"{DaemonName}{Platform.ExecutableFileExtension}");
                 var daemonBin = new FileInfo(daemonBinPath);
                 
                 DaemonArgs = new string[]
@@ -85,7 +85,7 @@ namespace InstallerLib
             {
                 var appBinPath = Path.Join(
                     InstallationDirectory.FullName,
-                    $"{AppName}/{AppName}{Platform.ExecutableFileExtension}");
+                    $"{AppName}{Platform.ExecutableFileExtension}");
                 var appBin = new FileInfo(appBinPath);
 
                 AppArgs = new string[0];
