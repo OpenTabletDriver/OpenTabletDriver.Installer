@@ -21,6 +21,9 @@ namespace InstallerLib
 
         public void Start(params string[] args)
         {
+            if (!BinaryFile.Exists)
+                throw new FileNotFoundException("The binary file does not exist.", BinaryFile.FullName);
+
             Log.Clear();
             Process = new Process
             {

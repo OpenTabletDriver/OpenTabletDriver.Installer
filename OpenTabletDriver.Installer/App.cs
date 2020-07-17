@@ -10,7 +10,7 @@ namespace OpenTabletDriver.Installer
     {
         public App()
         {
-            InstallationDirectory = new DirectoryInfo(Directory.GetCurrentDirectory());
+            InstallationDirectory = new DirectoryInfo(Path.Join(Directory.GetCurrentDirectory(), "bin"));
             
             Launcher = new Launcher(InstallationDirectory);
             Installer = new AppInstaller(InstallationDirectory);

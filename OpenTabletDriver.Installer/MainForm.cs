@@ -28,6 +28,11 @@ namespace OpenTabletDriver.Installer
 			var quitCommand = new Command { MenuText = "Quit", Shortcut = Application.Instance.CommonModifier | Keys.Q };
 			quitCommand.Executed += (sender, e) => Application.Instance.Quit();
 
+			var startButton = new Button((sender, e) => StartDriver())
+			{
+				Text = "Start"
+			};
+
 			var installButton = new Button
 			{
 				Text = "Install"
@@ -53,21 +58,18 @@ namespace OpenTabletDriver.Installer
 				{
 					installButton,
 					updateButton,
-					new Button((sender, e) => StartDriver())
-					{
-						Text = "Start"
-					}
+					startButton
 				}
 			};
 
-			async Task updateInfoView(bool triggerStart = true) => await UpdateInstallInfo(status, installButton, updateButton, triggerStart);
+			async Task updateInfoView(bool triggerStart = false) => await UpdateInstallInfo(status, installButton, updateButton, startButton, triggerStart);
 			async void toggleInstallState(object sender, EventArgs e)
 			{
                 if (!App.Current.Installer.IsInstalled)
 					await App.Current.Installer.InstallBinaries();
                 else
 					await App.Current.Installer.DeleteBinaries();
-				await updateInfoView(false);
+				await updateInfoView();
             }
 
 			async void updateInstall(object sender, EventArgs e)
@@ -76,15 +78,15 @@ namespace OpenTabletDriver.Installer
 					await App.Current.Installer.DeleteBinaries();
 
 				await App.Current.Installer.InstallBinaries();
-				await updateInfoView(false);
+				await updateInfoView();
 			}
 
-			this.PreLoad += async (sender, e) => await updateInfoView();
+			this.PreLoad += async (sender, e) => await updateInfoView(true);
 
 			Content = new StackLayout
 			{
 				Padding = 10,
-				Items = 
+				Items =
 				{
 					new StackLayoutItem(buttonPanel, HorizontalAlignment.Center),
 					new StackLayoutItem(status, HorizontalAlignment.Center)
@@ -116,7 +118,7 @@ namespace OpenTabletDriver.Installer
 			Unhide();
 		}
 
-		private async Task UpdateInstallInfo(Panel view, Button installButton, Button updateButton, bool triggerStart = true)
+		private async Task UpdateInstallInfo(Panel view, Button installButton, Button updateButton, Button startButton, bool triggerStart = false)
 		{
 			var control = new StackLayout
 			{
@@ -175,6 +177,7 @@ namespace OpenTabletDriver.Installer
 			view.Content = control;
 
 			installButton.Text = App.Current.Installer.IsInstalled ? "Uninstall" : "Install";
+			startButton.Visible = App.Current.Installer.IsInstalled;
 
 			if (App.Current.Installer.IsInstalled && !updateAvailable && triggerStart)
 				StartDriver();

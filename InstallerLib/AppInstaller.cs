@@ -17,8 +17,16 @@ namespace InstallerLib
         }
 
         public DirectoryInfo InstallationDirectory { private set; get; }
-        public bool IsInstalled => InstallationDirectory.Exists && InstallationDirectory.EnumerateFileSystemInfos().Count() > 0;
         public FileInfo VersionInfoFile => new FileInfo(Path.Join(InstallationDirectory.FullName, "versionInfo.json"));
+
+        public bool IsInstalled
+        {
+            get
+            {
+                InstallationDirectory.Refresh();
+                return InstallationDirectory.Exists && InstallationDirectory.EnumerateFileSystemInfos().Count() > 0;
+            }
+        }
 
         private readonly DirectoryInfo TempDirectory = new DirectoryInfo(Path.GetTempPath());
 
