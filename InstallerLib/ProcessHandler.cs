@@ -15,6 +15,7 @@ namespace InstallerLib
         public FileInfo BinaryFile { private set; get; }
         public Process Process { private set; get; }
         public bool IsRunning { private set; get; }
+        public bool HideWindow { set; get; } = false;
         public event EventHandler<int> Exited;
 
         public Dictionary<DateTime, string> Log { private set; get; } = new Dictionary<DateTime, string>();
@@ -32,7 +33,8 @@ namespace InstallerLib
                     FileName = BinaryFile.FullName,
                     Arguments = string.Join(' ', args),
                     RedirectStandardOutput = true,
-                    RedirectStandardError = true
+                    RedirectStandardError = true,
+                    CreateNoWindow = HideWindow
                 }
             };
             Process.OutputDataReceived += (s, e) => Log.Add(DateTime.Now, e?.Data);

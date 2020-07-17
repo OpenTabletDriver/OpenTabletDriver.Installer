@@ -191,8 +191,11 @@ namespace OpenTabletDriver.Installer
 
 		public void Unhide()
 		{
-			this.BringToFront();
-			this.ShowInTaskbar = true;
+			Application.Instance.Invoke(() => 
+			{
+				this.BringToFront();
+				this.ShowInTaskbar = true;
+			});
 		}
 
 		private void StartDriver()

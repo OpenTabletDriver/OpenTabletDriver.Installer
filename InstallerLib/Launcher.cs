@@ -65,7 +65,10 @@ namespace InstallerLib
                     ConfigurationDirectory.FullName
                 };
 
-                DaemonProcess = new ProcessHandler(daemonBin);
+                DaemonProcess = new ProcessHandler(daemonBin)
+                {
+                    HideWindow = true
+                };
                 DaemonProcess.Start(DaemonArgs.Union(args).ToArray());
             }
         }
