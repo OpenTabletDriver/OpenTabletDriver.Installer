@@ -62,7 +62,7 @@ namespace InstallerLib
                 DaemonArgs = new string[]
                 {
                     "-c",
-                    ConfigurationDirectory.FullName
+                    $"\"{ConfigurationDirectory.FullName}\""
                 };
 
                 DaemonProcess = new ProcessHandler(daemonBin)

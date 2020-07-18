@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 
@@ -18,7 +18,7 @@ namespace InstallerLib
         public bool HideWindow { set; get; } = false;
         public event EventHandler<int> Exited;
 
-        public Dictionary<DateTime, string> Log { private set; get; } = new Dictionary<DateTime, string>();
+        public ConcurrentDictionary<DateTime, string> Log { private set; get; } = new ConcurrentDictionary<DateTime, string>();
 
         public void Start(params string[] args)
         {
@@ -37,8 +37,8 @@ namespace InstallerLib
                     CreateNoWindow = HideWindow
                 }
             };
-            Process.OutputDataReceived += (s, e) => Log.Add(DateTime.Now, e?.Data);
-            Process.ErrorDataReceived += (s, e) => Log.Add(DateTime.Now, e?.Data);
+            Process.OutputDataReceived += (s, e) => Log.TryAdd(DateTime.Now, e?.Data);
+            Process.ErrorDataReceived += (s, e) => Log.TryAdd(DateTime.Now, e?.Data);
             Process.Exited += (s, e) => 
             {
                 Exited?.Invoke(this, Process.ExitCode);
