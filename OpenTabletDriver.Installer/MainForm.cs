@@ -4,6 +4,7 @@ using Eto.Drawing;
 using System.Threading.Tasks;
 using System.Timers;
 using InstallerLib;
+using OpenTabletDriver.Installer.Tools;
 
 namespace OpenTabletDriver.Installer
 {
@@ -15,7 +16,8 @@ namespace OpenTabletDriver.Installer
 			ClientSize = new Size(400, 350);
 			Icon = App.Current.Logo.WithSize(App.Current.Logo.Size);
 
-			Hide();
+			if (App.Current.Installer.IsInstalled)
+				Hide();
 
 			var status = new Panel()
 			{
@@ -65,20 +67,41 @@ namespace OpenTabletDriver.Installer
 			async Task updateInfoView(bool triggerStart = false) => await UpdateInstallInfo(status, installButton, updateButton, startButton, triggerStart);
 			async void toggleInstallState(object sender, EventArgs e)
 			{
-                if (!App.Current.Installer.IsInstalled)
-					await App.Current.Installer.InstallBinaries();
-                else
-					await App.Current.Installer.DeleteBinaries();
-				await updateInfoView();
+				using (new DisabledControls(installButton, updateButton, startButton))
+				{
+					if (await Downloader.CheckIfCanDownload() && !App.Current.Installer.IsInstalled)
+					{
+						await App.Current.Installer.InstallBinaries();
+					}
+					else if (App.Current.Installer.IsInstalled)
+					{
+						await App.Current.Installer.DeleteBinaries();
+					}
+					else
+					{
+						await ShowRateLimitError("install");
+					}
+					await updateInfoView();
+				}
             }
 
 			async void updateInstall(object sender, EventArgs e)
 			{
-				if (App.Current.Installer.IsInstalled)
-					await App.Current.Installer.DeleteBinaries();
+				using (new DisabledControls(installButton, updateButton, startButton))
+				{
+					if (await Downloader.CheckIfCanDownload())
+					{
+						if (App.Current.Installer.IsInstalled)
+							await App.Current.Installer.DeleteBinaries();
 
-				await App.Current.Installer.InstallBinaries();
-				await updateInfoView();
+						await App.Current.Installer.InstallBinaries();
+						await updateInfoView();
+					}
+					else
+					{
+						await ShowRateLimitError("update");
+					}
+				}
 			}
 
 			this.PreLoad += async (sender, e) => await updateInfoView(true);
@@ -114,8 +137,6 @@ namespace OpenTabletDriver.Installer
 				},
 				QuitItem = quitCommand
 			};
-
-			Unhide();
 		}
 
 		private async Task UpdateInstallInfo(Panel view, Button installButton, Button updateButton, Button startButton, bool triggerStart = false)
@@ -193,9 +214,16 @@ namespace OpenTabletDriver.Installer
 		{
 			Application.Instance.Invoke(() => 
 			{
-				this.BringToFront();
 				this.ShowInTaskbar = true;
+				this.BringToFront();
 			});
+		}
+
+		private async Task ShowRateLimitError(string action)
+		{
+			var rateLimit = await Downloader.GetRateLimit();
+			var time = rateLimit.Resources.Core.Reset.ToLocalTime().DateTime.ToLongTimeString();
+			MessageBox.Show($"Failed to {action}: the API is currently rate limited until {time}. Try again then.", MessageBoxType.Warning);
 		}
 
 		private void StartDriver()

@@ -15,8 +15,9 @@ namespace InstallerLib
             AppArgs = new string[0];
         }
 
-        private static string DaemonName => "OpenTabletDriver.Daemon";
-        private static string AppName
+        internal static string DaemonName => "OpenTabletDriver.Daemon";
+        internal static string ConsoleName => "OpenTabletDriver.Console";
+        internal static string AppName
         {
             get
             {
