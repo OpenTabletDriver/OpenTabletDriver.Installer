@@ -175,6 +175,7 @@ namespace OpenTabletDriver.Installer
 				control.Items.Add(updateBox);
 
 				updateButton.Visible = true;
+				Unhide();
 			}
 			else
 			{
