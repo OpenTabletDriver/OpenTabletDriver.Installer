@@ -206,15 +206,21 @@ namespace OpenTabletDriver.Installer
 
 		public void Hide()
 		{
-			this.Minimize();
-			this.ShowInTaskbar = false;
+			Application.Instance.AsyncInvoke(() => 
+			{
+				this.Minimize();
+				this.ShowInTaskbar = false;
+				this.Visible = false;
+			});
 		}
 
 		public void Unhide()
 		{
-			Application.Instance.Invoke(() => 
+			Application.Instance.AsyncInvoke(async () => 
 			{
+				this.Visible = true;
 				this.ShowInTaskbar = true;
+				await Task.Delay(100);
 				this.BringToFront();
 			});
 		}
@@ -236,7 +242,7 @@ namespace OpenTabletDriver.Installer
 			{
 				if (App.Current.Launcher.AppProcess.Process.HasExited)
 				{
-					App.Current.Launcher.DaemonProcess.Stop();
+					App.Current.Launcher.StopDaemon();
 					watchdog.Stop();
 					watchdog.Dispose();
 					Unhide();
