@@ -40,7 +40,7 @@ namespace InstallerLib
         public static async Task<bool> CheckIfCanDownload()
         {
             var rateLimit = await GetRateLimit();
-            return rateLimit.Resources.Core.Remaining > 1;
+            return rateLimit.Resources.Core.Remaining > 5;
         }
 
         public static async Task<Repository> GetRepository()
