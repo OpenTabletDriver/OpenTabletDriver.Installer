@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -36,47 +37,83 @@ namespace InstallerLib
         /// <returns></returns>
         public async Task InstallBinaries()
         {
-            InstallationDirectory.Create();
-
-            var release = await Downloader.GetLatestRelease();
-            var asset = await Downloader.GetCurrentPlatformAsset(release);
-            var extension = asset.Name.Split('.').Last();
-            
-            using (var httpStream = await Downloader.GetAssetStream(asset))
+            if (await Downloader.CheckIfCanDownload())
             {
-                if (extension == "zip")
-                {
-                    // Create a temporary file to extract from
-                    var filename = $"{Guid.NewGuid()}.zip";
-                    var file = new FileInfo(Path.Join(TempDirectory.FullName, filename));
-                    using (var fileStream = file.Create())
-                    {
-                        // Download zip to temporary file to extract from
-                        await httpStream.CopyToAsync(fileStream);
-                    }
-                    // Extract to directory
-                    ZipFile.ExtractToDirectory(file.FullName, InstallationDirectory.FullName);
-                    // Clean up files
-                    file.Delete();
-                }
-                else if (extension == "gz")
-                {
-                    using (var decompressionStream = new GZipStream(httpStream, CompressionMode.Decompress))
-                    using (var tar = TarArchive.CreateInputTarArchive(decompressionStream))
-                    {    
-                        // Extract to directory
-                        tar.ExtractContents(InstallationDirectory.FullName);
-                    }
-                }
-                else
-                {
-                    throw new Exception("Unknown file extension, unable to decompress.");
-                }
-            }
+                InstallationDirectory.Create();
 
-            var versionInfo = new VersionInfo(release.TagName);
-            using (var fs = VersionInfoFile.OpenWrite())
-                versionInfo.Serialize(fs);
+                var release = await Downloader.GetLatestRelease();
+                var asset = await Downloader.GetCurrentPlatformAsset(release);
+                var extension = asset.Name.Split('.').Last();
+                
+                using (var httpStream = await Downloader.GetAssetStream(asset))
+                {
+                    if (extension == "zip")
+                    {
+                        // Create a temporary file to extract from
+                        var filename = $"{Guid.NewGuid()}.zip";
+                        var file = new FileInfo(Path.Join(TempDirectory.FullName, filename));
+                        using (var fileStream = file.Create())
+                        {
+                            // Download zip to temporary file to extract from
+                            await httpStream.CopyToAsync(fileStream);
+                        }
+                        // Extract to directory
+                        ZipFile.ExtractToDirectory(file.FullName, InstallationDirectory.FullName);
+                        // Clean up files
+                        file.Delete();
+                    }
+                    else if (extension == "gz")
+                    {
+                        using (var decompressionStream = new GZipStream(httpStream, CompressionMode.Decompress))
+                        using (var tar = TarArchive.CreateInputTarArchive(decompressionStream))
+                        {    
+                            // Extract to directory
+                            tar.ExtractContents(InstallationDirectory.FullName);
+                        }
+
+                        var newDirectories = InstallationDirectory.GetDirectories();
+                        if (newDirectories.Length == 1)
+                        {
+                            var directory = newDirectories.First();
+                            if (directory.Name != "Configurations")
+                            {
+                                foreach (var fsinfo in directory.GetFileSystemInfos())
+                                {
+                                    if (fsinfo is FileInfo file)
+                                        file.MoveTo(Path.Join(InstallationDirectory.FullName, file.Name));
+                                    else if (fsinfo is DirectoryInfo dir)
+                                        dir.MoveTo(Path.Join(InstallationDirectory.FullName, dir.Name));
+                                }
+                            }
+                            directory.Delete();
+                        }
+
+                        var executables = from file in InstallationDirectory.EnumerateFiles()
+                            where file.Name == Launcher.AppName || file.Name == Launcher.DaemonName || file.Name == Launcher.ConsoleName
+                            select file;
+
+                        foreach (var file in executables)
+                        {
+                            switch (Platform.ActivePlatform)
+                            {
+                                case RuntimePlatform.Linux:
+                                case RuntimePlatform.MacOS:
+                                case RuntimePlatform.FreeBSD:
+                                    Process.Start("chmod", $"+rwx \"{file.FullName}\"");
+                                    break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        throw new Exception("Unknown file extension, unable to decompress.");
+                    }
+                }
+
+                var versionInfo = new VersionInfo(release.TagName);
+                using (var fs = VersionInfoFile.OpenWrite())
+                    versionInfo.Serialize(fs);
+            }
         }
 
         /// <summary>
@@ -116,12 +153,12 @@ namespace InstallerLib
                 using (var fs = VersionInfoFile.OpenRead())
                 {
                     var version = VersionInfo.Deserialize(fs);
-                    try 
+                    if (await Downloader.CheckIfCanDownload())
                     {
                         var release = await Downloader.GetLatestRelease();
                         return release.TagName != version.InstalledVersion;
                     }
-                    catch (RateLimitExceededException)
+                    else
                     {
                         return false;
                     }

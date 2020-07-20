@@ -32,6 +32,17 @@ namespace InstallerLib
             }
         }
 
+        public static async Task<MiscellaneousRateLimit> GetRateLimit()
+        {
+            return await Client.Miscellaneous.GetRateLimits();
+        }
+
+        public static async Task<bool> CheckIfCanDownload()
+        {
+            var rateLimit = await GetRateLimit();
+            return rateLimit.Resources.Core.Remaining > 5;
+        }
+
         public static async Task<Repository> GetRepository()
         {
             return await Client.Repository.Get(Owner, RepositoryName);
@@ -42,6 +53,12 @@ namespace InstallerLib
             var repo = await GetRepository();
             var releases = await Client.Repository.Release.GetAll(repo.Id);
             return releases.First();
+        }
+
+        public static async Task<Release> GetRelease(string tag)
+        {
+            var repo = await GetRepository();
+            return await Client.Repository.Release.Get(repo.Id, tag);
         }
 
         public static async Task<ReleaseAsset> GetCurrentPlatformAsset(Release release)

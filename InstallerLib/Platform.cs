@@ -47,7 +47,7 @@ namespace InstallerLib
             switch (ActivePlatform)
             {
                 case RuntimePlatform.Windows:
-                    var startInfo = new ProcessStartInfo("cmd", $"/c start {path.Replace("&", "^&")}")
+                    var startInfo = new ProcessStartInfo("cmd", $"/c start \"\" \"{path.Replace("&", "^&")}\"")
                     {
                         CreateNoWindow = true
                     };
