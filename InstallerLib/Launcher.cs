@@ -15,26 +15,16 @@ namespace InstallerLib
             AppArgs = new string[0];
         }
 
-        internal static string DaemonName => "OpenTabletDriver.Daemon";
-        internal static string ConsoleName => "OpenTabletDriver.Console";
-        internal static string AppName
+        internal const string DaemonName = "OpenTabletDriver.Daemon";
+        internal const string ConsoleName = "OpenTabletDriver.Console";
+        private const string UXPrefix = "OpenTabletDriver.UX.";
+        internal static string AppName => Platform.ActivePlatform switch
         {
-            get
-            {
-                var uxRoot = "OpenTabletDriver.UX.";
-                switch (Platform.ActivePlatform)
-                {
-                    case RuntimePlatform.Windows:
-                        return uxRoot + "Wpf";
-                    case RuntimePlatform.Linux:
-                        return uxRoot + "Gtk";
-                    case RuntimePlatform.MacOS:
-                        return uxRoot + "MacOS";
-                    default:
-                        throw new PlatformNotSupportedException();
-                }
-            }
-        }
+            RuntimePlatform.Windows => UXPrefix + "Wpf",
+            RuntimePlatform.Linux   => UXPrefix + "Gtk",
+            RuntimePlatform.MacOS   => UXPrefix + "MacOS",
+            _                       => throw new PlatformNotSupportedException()
+        };
 
         public ProcessHandler AppProcess { private set; get; }
         public string[] AppArgs { private set; get;}

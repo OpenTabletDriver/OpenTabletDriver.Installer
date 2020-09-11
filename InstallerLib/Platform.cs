@@ -24,21 +24,12 @@ namespace InstallerLib
             }
         }
 
-        public static string ExecutableFileExtension
+        public static string ExecutableFileExtension => ActivePlatform switch
         {
-            get
-            {
-                switch (ActivePlatform)
-                {
-                    case RuntimePlatform.Windows:
-                        return ".exe";
-                    case RuntimePlatform.MacOS:
-                        return ".app";
-                    default:
-                        return "";
-                }
-            }
-        }
+            RuntimePlatform.Windows => ".exe",
+            RuntimePlatform.MacOS   => ".app",
+            _                       => ""
+        };
 
         public static void Open(FileSystemInfo fsinfo) => Open(fsinfo.FullName);
 
