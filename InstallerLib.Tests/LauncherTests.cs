@@ -18,17 +18,12 @@ namespace InstallerLib.Tests
 
         public void StartProcesses()
         {
-            Launcher.StartDaemon();
-            Launcher.StartApp();
+            Launcher.Start();
         }
         
         public void StopProcesses()
         {
-            Launcher.StopApp();
-            Launcher.StopDaemon();
-            
-            foreach (var message in Launcher.DaemonProcess.Log)
-                Console.WriteLine(message.Value);
+            Launcher.Stop();
         }
 
         [TestMethod]

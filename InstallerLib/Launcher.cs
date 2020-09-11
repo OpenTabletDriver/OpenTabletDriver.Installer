@@ -36,9 +36,6 @@ namespace InstallerLib
             }
         }
 
-        public ProcessHandler DaemonProcess { private set; get; }
-        public string[] DaemonArgs { private set; get; }
-        
         public ProcessHandler AppProcess { private set; get; }
         public string[] AppArgs { private set; get;}
 
@@ -51,39 +48,7 @@ namespace InstallerLib
             get => _configDir ?? new DirectoryInfo(Path.Join(InstallationDirectory.FullName, "Configurations"));
         }
 
-        public void StartDaemon(params string[] args)
-        {
-            if (DaemonProcess == null || !DaemonProcess.IsRunning)
-            {
-                var daemonBinPath = Path.Join(
-                    InstallationDirectory.FullName,
-                    $"{DaemonName}{Platform.ExecutableFileExtension}");
-                var daemonBin = new FileInfo(daemonBinPath);
-                
-                DaemonArgs = new string[]
-                {
-                    "-c",
-                    $"\"{ConfigurationDirectory.FullName}\""
-                };
-
-                DaemonProcess = new ProcessHandler(daemonBin)
-                {
-                    HideWindow = true
-                };
-                DaemonProcess.Start(DaemonArgs.Union(args).ToArray());
-            }
-        }
-
-        public void StopDaemon()
-        {
-            if (DaemonProcess != null || DaemonProcess.IsRunning)
-            {
-                DaemonProcess.Stop();
-                DaemonProcess = null;
-            }
-        }
-
-        public void StartApp(params string[] args)
+        public void Start(params string[] args)
         {
             if (AppProcess == null || !AppProcess.IsRunning)
             {
@@ -99,7 +64,7 @@ namespace InstallerLib
             }
         }
 
-        public void StopApp()
+        public void Stop()
         {
             if (AppProcess != null || AppProcess.IsRunning)
             {
