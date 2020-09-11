@@ -15,30 +15,17 @@ namespace InstallerLib
             AppArgs = new string[0];
         }
 
-        internal static string DaemonName => "OpenTabletDriver.Daemon";
-        internal static string ConsoleName => "OpenTabletDriver.Console";
-        internal static string AppName
+        internal const string DaemonName = "OpenTabletDriver.Daemon";
+        internal const string ConsoleName = "OpenTabletDriver.Console";
+        private const string UXPrefix = "OpenTabletDriver.UX.";
+        internal static string AppName => Platform.ActivePlatform switch
         {
-            get
-            {
-                var uxRoot = "OpenTabletDriver.UX.";
-                switch (Platform.ActivePlatform)
-                {
-                    case RuntimePlatform.Windows:
-                        return uxRoot + "Wpf";
-                    case RuntimePlatform.Linux:
-                        return uxRoot + "Gtk";
-                    case RuntimePlatform.MacOS:
-                        return uxRoot + "MacOS";
-                    default:
-                        throw new PlatformNotSupportedException();
-                }
-            }
-        }
+            RuntimePlatform.Windows => UXPrefix + "Wpf",
+            RuntimePlatform.Linux   => UXPrefix + "Gtk",
+            RuntimePlatform.MacOS   => UXPrefix + "MacOS",
+            _                       => throw new PlatformNotSupportedException()
+        };
 
-        public ProcessHandler DaemonProcess { private set; get; }
-        public string[] DaemonArgs { private set; get; }
-        
         public ProcessHandler AppProcess { private set; get; }
         public string[] AppArgs { private set; get;}
 
@@ -51,39 +38,7 @@ namespace InstallerLib
             get => _configDir ?? new DirectoryInfo(Path.Join(InstallationDirectory.FullName, "Configurations"));
         }
 
-        public void StartDaemon(params string[] args)
-        {
-            if (DaemonProcess == null || !DaemonProcess.IsRunning)
-            {
-                var daemonBinPath = Path.Join(
-                    InstallationDirectory.FullName,
-                    $"{DaemonName}{Platform.ExecutableFileExtension}");
-                var daemonBin = new FileInfo(daemonBinPath);
-                
-                DaemonArgs = new string[]
-                {
-                    "-c",
-                    $"\"{ConfigurationDirectory.FullName}\""
-                };
-
-                DaemonProcess = new ProcessHandler(daemonBin)
-                {
-                    HideWindow = true
-                };
-                DaemonProcess.Start(DaemonArgs.Union(args).ToArray());
-            }
-        }
-
-        public void StopDaemon()
-        {
-            if (DaemonProcess != null || DaemonProcess.IsRunning)
-            {
-                DaemonProcess.Stop();
-                DaemonProcess = null;
-            }
-        }
-
-        public void StartApp(params string[] args)
+        public void Start(params string[] args)
         {
             if (AppProcess == null || !AppProcess.IsRunning)
             {
@@ -99,7 +54,7 @@ namespace InstallerLib
             }
         }
 
-        public void StopApp()
+        public void Stop()
         {
             if (AppProcess != null || AppProcess.IsRunning)
             {

@@ -16,21 +16,14 @@ namespace InstallerLib
         const string RepositoryName = "OpenTabletDriver";
         private static readonly GitHubClient Client = new GitHubClient(new ProductHeaderValue("OpenTabletDriver.Installer"));
 
-        internal static string GetCurrentPlatformFileName()
+        const string PlatformFileFormat = "OpenTabletDriver.{0}.{1}";
+        internal static string PackageName => Platform.ActivePlatform switch
         {
-            string fileFormat = "OpenTabletDriver.{0}.{1}";
-            switch (Platform.ActivePlatform)
-            {
-                case RuntimePlatform.Windows:
-                    return string.Format(fileFormat, "win-x64", "zip");
-                case RuntimePlatform.Linux:
-                    return string.Format(fileFormat, "linux-x64", "tar.gz");
-                case RuntimePlatform.MacOS:
-                    return string.Format(fileFormat, "macos-x64", "tar.gz");
-                default:
-                    throw new PlatformNotSupportedException("The active platform is unsupported, therefore a filename cannot be provided.");
-            }
-        }
+            RuntimePlatform.Windows => string.Format(PlatformFileFormat, "win-x64", "zip"),
+            RuntimePlatform.Linux   => string.Format(PlatformFileFormat, "linux-x64", "tar.gz"),
+            RuntimePlatform.MacOS   => string.Format(PlatformFileFormat, "osx-x64", "tar.gz"),
+            _                       => throw new PlatformNotSupportedException()
+        };
 
         public static async Task<MiscellaneousRateLimit> GetRateLimit()
         {
@@ -63,19 +56,15 @@ namespace InstallerLib
 
         public static async Task<ReleaseAsset> GetCurrentPlatformAsset(Release release)
         {
-            using (var webClient = new HttpClient())
-            {
-                var repo = await GetRepository();
-                var releases = await Client.Repository.Release.GetAllAssets(repo.Id, release.Id);
-                var filename = GetCurrentPlatformFileName();
-                return releases.FirstOrDefault(r => r.Name == filename);
-            }
+            var repo = await GetRepository();
+            var releases = await Client.Repository.Release.GetAllAssets(repo.Id, release.Id);
+            return releases.FirstOrDefault(r => r.Name == PackageName);
         }
 
         public static async Task<Stream> GetAssetStream(ReleaseAsset asset)
         {
-            using (var webClient = new HttpClient())
-                return await webClient.GetStreamAsync(asset.BrowserDownloadUrl);
+            using (var client = new HttpClient())
+                return await client.GetStreamAsync(asset.BrowserDownloadUrl);
         }
     }
 }

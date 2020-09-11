@@ -236,14 +236,12 @@ namespace OpenTabletDriver.Installer
 		private void StartDriver()
 		{
 			Hide();
-			App.Current.Launcher.StartDaemon();
-			App.Current.Launcher.StartApp();
+			App.Current.Launcher.Start();
 			var watchdog = new Timer(TimeSpan.FromSeconds(1).TotalMilliseconds);
 			watchdog.Elapsed += (sender, e) => 
 			{
 				if (App.Current.Launcher.AppProcess.Process.HasExited)
 				{
-					App.Current.Launcher.StopDaemon();
 					watchdog.Stop();
 					watchdog.Dispose();
 					Unhide();

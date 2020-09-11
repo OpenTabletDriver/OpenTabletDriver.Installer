@@ -34,7 +34,8 @@ namespace InstallerLib
                     Arguments = string.Join(' ', args),
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
-                    CreateNoWindow = HideWindow
+                    CreateNoWindow = HideWindow,
+                    WorkingDirectory = BinaryFile.Directory.FullName
                 }
             };
             Process.OutputDataReceived += (s, e) => Log.TryAdd(DateTime.Now, e?.Data);
