@@ -37,8 +37,9 @@ namespace InstallerLib
                 InstallationDirectory.Delete(true);
                 InstallationDirectory.Create();
 
-                var release = await Downloader.GetLatestRelease();
-                var asset = await Downloader.GetCurrentPlatformAsset(release);
+                var repo = await Downloader.GetRepository(GitHubInfo.MainRepository);
+                var release = await Downloader.GetLatestRelease(repo);
+                var asset = await Downloader.GetCurrentPlatformAsset(repo, release);
                 var extension = asset.Name.Split('.').Last();
                 
                 using (var httpStream = await Downloader.GetAssetStream(asset))
@@ -183,7 +184,8 @@ namespace InstallerLib
                     var version = VersionInfo.Deserialize(fs);
                     if (await Downloader.CheckIfCanDownload())
                     {
-                        var release = await Downloader.GetLatestRelease();
+                        var repo = await Downloader.GetRepository(GitHubInfo.MainRepository);
+                        var release = await Downloader.GetLatestRelease(repo);
                         return release.TagName != version.InstalledVersion;
                     }
                     else

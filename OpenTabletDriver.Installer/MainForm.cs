@@ -79,6 +79,25 @@ namespace OpenTabletDriver.Installer
 
 		public async void UpdateControls(bool autostart = false)
 		{
+			if (await InstallerInfo.CheckForUpdate())
+			{
+				var result = MessageBox.Show(
+					"An update is available for the installer." + Environment.NewLine +
+					"Do you wish to be directed to the latest release?",
+					"Installer Update",
+					MessageBoxButtons.YesNo,
+					MessageBoxType.Information
+				);
+				switch (result)
+				{
+					case DialogResult.Yes:
+						InstallerLib.Platform.Open(GitHubInfo.InstallerReleaseUrl);
+						Application.Instance.Quit();
+						break;
+				}
+				autostart = false;
+			}
+
 			bool installed = App.Current.Installer.IsInstalled;
 			bool update = await App.Current.Installer.CheckForUpdate();
 			

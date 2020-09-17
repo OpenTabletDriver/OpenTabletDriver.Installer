@@ -1,0 +1,11 @@
+﻿namespace InstallerLib
+{
+    public static class GitHubInfo
+    {
+        public const string Owner = "InfinityGhost";
+        public const string MainRepository = "OpenTabletDriver";
+        public const string InstallerRepository = "OpenTabletDriver.Installer";
+
+        public static string InstallerReleaseUrl => $"https://github.com/{Owner}/{InstallerRepository}/releases";
+    }
+}
