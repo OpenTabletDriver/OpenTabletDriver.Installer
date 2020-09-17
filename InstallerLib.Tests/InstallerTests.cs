@@ -27,10 +27,10 @@ namespace InstallerLib.Tests
         }
 
         [TestMethod]
-        public async Task Uninstall()
+        public void Uninstall()
         {
             Console.WriteLine($"Uninstalling binaries in '{InstallationDirectory}'...");
-            await Installer.DeleteBinaries();
+            Installer.DeleteBinaries();
             Debug.Assert(!InstallationDirectory.Exists);
             Console.WriteLine($"Uninstallation successful.");
         }

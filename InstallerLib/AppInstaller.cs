@@ -10,7 +10,7 @@ using Octokit;
 
 namespace InstallerLib
 {
-    public class AppInstaller
+    public class AppInstaller : Progress<double>
     {
         public AppInstaller(DirectoryInfo installationDirectory)
         {
@@ -20,14 +20,9 @@ namespace InstallerLib
         public DirectoryInfo InstallationDirectory { private set; get; }
         public FileInfo VersionInfoFile => new FileInfo(Path.Join(InstallationDirectory.FullName, "versionInfo.json"));
 
-        public bool IsInstalled
-        {
-            get
-            {
-                InstallationDirectory.Refresh();
-                return InstallationDirectory.Exists && InstallationDirectory.EnumerateFileSystemInfos().Count() > 0;
-            }
-        }
+        private const int BufferSize = 81920;
+
+        public bool IsInstalled => VersionInfoFile.Exists;
 
         private readonly DirectoryInfo TempDirectory = new DirectoryInfo(Path.GetTempPath());
 
@@ -35,10 +30,11 @@ namespace InstallerLib
         /// Download, extract, and move all binary files from the latest GitHub release.
         /// </summary>
         /// <returns></returns>
-        public async Task InstallBinaries()
+        public async Task<bool> InstallBinaries()
         {
             if (await Downloader.CheckIfCanDownload())
             {
+                InstallationDirectory.Delete(true);
                 InstallationDirectory.Create();
 
                 var release = await Downloader.GetLatestRelease();
@@ -53,10 +49,8 @@ namespace InstallerLib
                         var filename = $"{Guid.NewGuid()}.zip";
                         var file = new FileInfo(Path.Join(TempDirectory.FullName, filename));
                         using (var fileStream = file.Create())
-                        {
-                            // Download zip to temporary file to extract from
-                            await httpStream.CopyToAsync(fileStream);
-                        }
+                            await CopyStreamWithProgress(asset.Size, httpStream, fileStream);
+
                         // Extract to directory
                         ZipFile.ExtractToDirectory(file.FullName, InstallationDirectory.FullName);
                         // Clean up files
@@ -64,11 +58,15 @@ namespace InstallerLib
                     }
                     else if (extension == "gz")
                     {
-                        using (var decompressionStream = new GZipStream(httpStream, CompressionMode.Decompress))
-                        using (var tar = TarArchive.CreateInputTarArchive(decompressionStream))
-                        {    
-                            // Extract to directory
-                            tar.ExtractContents(InstallationDirectory.FullName);
+                        using (var memoryStream = new MemoryStream(asset.Size))
+                        {
+                            await CopyStreamWithProgress(asset.Size, httpStream, memoryStream);
+                            using (var decompressionStream = new GZipStream(memoryStream, CompressionMode.Decompress))
+                            using (var tar = TarArchive.CreateInputTarArchive(decompressionStream))
+                            {    
+                                // Extract to directory
+                                tar.ExtractContents(InstallationDirectory.FullName);
+                            }
                         }
 
                         var newDirectories = InstallationDirectory.GetDirectories();
@@ -113,21 +111,51 @@ namespace InstallerLib
                 var versionInfo = new VersionInfo(release.TagName);
                 using (var fs = VersionInfoFile.OpenWrite())
                     versionInfo.Serialize(fs);
+
+                return true;
             }
+            return false;
+        }
+
+        private async Task CopyStreamWithProgress(int length, Stream source, Stream target)
+        {
+            var buffer = new byte[BufferSize];
+            int i = 0;
+            while (true)
+            {
+                this.OnReport((float)i / (float)length);
+
+                int bytesRead = await source.ReadAsync(buffer, 0, BufferSize);
+                if (bytesRead == 0)
+                    break;
+
+                await target.WriteAsync(buffer[0..bytesRead], 0, bytesRead);
+                i += BufferSize;
+            }
+
+            // Reset stream position
+            target.Position = 0;
+
+            // Report copy complete
+            this.OnReport(1f);
         }
 
         /// <summary>
         /// Remove all binaries associated with OpenTabletDriver.
         /// </summary>
-        public async Task DeleteBinaries()
+        public void DeleteBinaries()
         {
-            await Task.Run(() => 
+            var fsInfos = InstallationDirectory.GetFileSystemInfos("*", SearchOption.TopDirectoryOnly);
+            int i = 0;
+            foreach (var item in fsInfos)
             {
-                foreach (var dir in InstallationDirectory.GetDirectories("*", SearchOption.TopDirectoryOnly))
+                if (item is DirectoryInfo dir)
                     dir.Delete(true);
-                foreach (var file in InstallationDirectory.GetFiles("*", SearchOption.TopDirectoryOnly))
+                else if (item is FileInfo file)
                     file.Delete();
-            });
+                i++;
+                OnReport(i / fsInfos.Length);
+            }
         }
 
         /// <summary>
