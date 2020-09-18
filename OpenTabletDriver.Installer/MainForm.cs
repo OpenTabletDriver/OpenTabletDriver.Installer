@@ -79,7 +79,7 @@ namespace OpenTabletDriver.Installer
 
 		public async void UpdateControls(bool autostart = false)
 		{
-			if (await InstallerInfo.CheckForUpdate())
+			if (!shownInstallerUpdate && await InstallerInfo.CheckForUpdate())
 			{
 				var result = MessageBox.Show(
 					"An update is available for the installer." + Environment.NewLine +
@@ -96,6 +96,7 @@ namespace OpenTabletDriver.Installer
 						break;
 				}
 				autostart = false;
+				shownInstallerUpdate = true;
 			}
 
 			bool installed = App.Current.Installer.IsInstalled;
@@ -154,6 +155,7 @@ namespace OpenTabletDriver.Installer
 
 		private Button startButton, installButton, uninstallButton, updateButton;
 		private StackLayout status;
+		private bool shownInstallerUpdate;
 
 		public async Task Install(bool isUpdate = false)
 		{

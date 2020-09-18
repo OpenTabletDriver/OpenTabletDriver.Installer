@@ -34,7 +34,8 @@ namespace InstallerLib
         {
             if (await Downloader.CheckIfCanDownload())
             {
-                InstallationDirectory.Delete(true);
+                if (InstallationDirectory.Exists)
+                    InstallationDirectory.Delete(true);
                 InstallationDirectory.Create();
 
                 var repo = await Downloader.GetRepository(GitHubInfo.MainRepository);
