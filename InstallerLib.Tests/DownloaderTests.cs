@@ -13,15 +13,17 @@ namespace InstallerLib.Tests
         [TestMethod]
         public async Task GetLatestTag()
         {
-            var release = await Downloader.GetLatestRelease();
+            var repo = await Downloader.GetRepository(GitHubInfo.MainRepository);
+            var release = await Downloader.GetLatestRelease(repo);
             Console.WriteLine(release.TagName);
         }
 
         [TestMethod]
         public async Task DownloadToMemory()
         {
-            var latestRelease = await Downloader.GetLatestRelease();
-            var asset = await Downloader.GetCurrentPlatformAsset(latestRelease);
+            var repo = await Downloader.GetRepository(GitHubInfo.MainRepository);
+            var latestRelease = await Downloader.GetLatestRelease(repo);
+            var asset = await Downloader.GetCurrentPlatformAsset(repo, latestRelease);
 
             var sw = Stopwatch.StartNew();
             using (var fs = await Downloader.GetAssetStream(asset))

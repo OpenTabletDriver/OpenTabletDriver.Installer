@@ -5,10 +5,11 @@ using System.Threading.Tasks;
 using System.Timers;
 using InstallerLib;
 using OpenTabletDriver.Installer.Tools;
+using System.Collections.Generic;
 
 namespace OpenTabletDriver.Installer
 {
-	public partial class MainForm : Form
+    public partial class MainForm : Form
 	{
 		public MainForm()
 		{
@@ -16,12 +17,13 @@ namespace OpenTabletDriver.Installer
 			ClientSize = new Size(400, 350);
 			Icon = App.Current.Logo.WithSize(App.Current.Logo.Size);
 
-			if (App.Current.Installer.IsInstalled)
-				Hide();
-
-			var status = new Panel()
+			this.status = new StackLayout()
 			{
-				Padding = 10
+				Orientation = Orientation.Vertical,
+				VerticalContentAlignment = VerticalAlignment.Center,
+				HorizontalContentAlignment = HorizontalAlignment.Center,
+				Padding = 10,
+				Spacing = 5,
 			};
 
 			var showFolder = new Command { MenuText = "Show install folder...", ToolBarText = "Show install folder" };
@@ -30,90 +32,24 @@ namespace OpenTabletDriver.Installer
 			var quitCommand = new Command { MenuText = "Quit", Shortcut = Application.Instance.CommonModifier | Keys.Q };
 			quitCommand.Executed += (sender, e) => Application.Instance.Quit();
 
-			var startButton = new Button((sender, e) => StartDriver())
+			this.startButton = new Button((sender, e) => Start())
 			{
 				Text = "Start"
 			};
 
-			var installButton = new Button
+			this.installButton = new Button(async (sender, e) => await Install())
 			{
 				Text = "Install"
 			};
+
+			this.uninstallButton = new Button((sender, e) => Uninstall())
+			{
+				Text = "Uninstall"
+			};
 			
-			var updateButton = new Button
+			this.updateButton = new Button(async (sender, e) => await Install(isUpdate: true))
 			{
-				Text = "Update",
-				Visible = false
-			};
-			updateButton.Click += updateInstall;
-
-			installButton.Click += toggleInstallState;
-
-			var buttonPanel = new StackLayout
-			{
-				Orientation = Orientation.Horizontal,
-				VerticalContentAlignment = VerticalAlignment.Center,
-				HorizontalContentAlignment = HorizontalAlignment.Center,
-				Spacing = 5,
-				Padding = 5,
-				Items = 
-				{
-					installButton,
-					updateButton,
-					startButton
-				}
-			};
-
-			async Task updateInfoView(bool triggerStart = false) => await UpdateInstallInfo(status, installButton, updateButton, startButton, triggerStart);
-			async void toggleInstallState(object sender, EventArgs e)
-			{
-				using (new DisabledControls(installButton, updateButton, startButton))
-				{
-					if (await Downloader.CheckIfCanDownload() && !App.Current.Installer.IsInstalled)
-					{
-						await App.Current.Installer.InstallBinaries();
-					}
-					else if (App.Current.Installer.IsInstalled)
-					{
-						await App.Current.Installer.DeleteBinaries();
-					}
-					else
-					{
-						await ShowRateLimitError("install");
-					}
-					await updateInfoView();
-				}
-            }
-
-			async void updateInstall(object sender, EventArgs e)
-			{
-				using (new DisabledControls(installButton, updateButton, startButton))
-				{
-					if (await Downloader.CheckIfCanDownload())
-					{
-						if (App.Current.Installer.IsInstalled)
-							await App.Current.Installer.DeleteBinaries();
-
-						await App.Current.Installer.InstallBinaries();
-						await updateInfoView();
-					}
-					else
-					{
-						await ShowRateLimitError("update");
-					}
-				}
-			}
-
-			this.PreLoad += async (sender, e) => await updateInfoView(true);
-
-			Content = new StackLayout
-			{
-				Padding = 10,
-				Items =
-				{
-					new StackLayoutItem(buttonPanel, HorizontalAlignment.Center),
-					new StackLayoutItem(status, HorizontalAlignment.Center)
-				}
+				Text = "Update"
 			};
 
 			// create menu
@@ -137,72 +73,132 @@ namespace OpenTabletDriver.Installer
 				},
 				QuitItem = quitCommand
 			};
+
+			UpdateControls(autostart: true);
 		}
 
-		private async Task UpdateInstallInfo(Panel view, Button installButton, Button updateButton, Button startButton, bool triggerStart = false)
+		public async void UpdateControls(bool autostart = false)
 		{
-			var control = new StackLayout
+			if (await InstallerInfo.CheckForUpdate())
 			{
-				HorizontalContentAlignment = HorizontalAlignment.Center,
-				VerticalContentAlignment = VerticalAlignment.Center,
-				Items = 
+				var result = MessageBox.Show(
+					"An update is available for the installer." + Environment.NewLine +
+					"Do you wish to be directed to the latest release?",
+					"Installer Update",
+					MessageBoxButtons.YesNo,
+					MessageBoxType.Information
+				);
+				switch (result)
 				{
-					new StackLayoutItem
-					{
-						Control = new ImageView
-						{
-							Image = App.Current.Logo,
-							Size = new Size(150, 150)
-						},
-						HorizontalAlignment = HorizontalAlignment.Center
-					},
-					new StackLayoutItem
-					{
-						Control = $"OpenTabletDriver is {(App.Current.Installer.IsInstalled ? "" : "not ")}installed.",
-						HorizontalAlignment = HorizontalAlignment.Center
-					}
+					case DialogResult.Yes:
+						InstallerLib.Platform.Open(GitHubInfo.InstallerReleaseUrl);
+						Application.Instance.Quit();
+						break;
+				}
+				autostart = false;
+			}
+
+			bool installed = App.Current.Installer.IsInstalled;
+			bool update = await App.Current.Installer.CheckForUpdate();
+			
+			var buttons = new List<Button>
+			{
+				installed ? this.uninstallButton : this.installButton,
+				update & installed ? this.updateButton : null,
+				installed ? startButton : null
+			};
+
+			var buttonPanel = new StackLayout
+			{
+				Orientation = Orientation.Horizontal,
+				VerticalContentAlignment = VerticalAlignment.Center,
+				HorizontalContentAlignment = HorizontalAlignment.Center,
+				Spacing = 5,
+				Padding = 5
+			};
+			foreach (var button in buttons)
+				if (button != null)
+					buttonPanel.Items.Add(button);
+
+			this.Content = new StackLayout
+			{
+				Padding = 10,
+				Items =
+				{
+					new StackLayoutItem(null, true),
+					new StackLayoutItem(new Bitmap(App.Current.Logo.WithSize(128, 128)), HorizontalAlignment.Center),
+					new StackLayoutItem(status, HorizontalAlignment.Center),
+					new StackLayoutItem(buttonPanel, HorizontalAlignment.Center),
+					new StackLayoutItem(null, true)
 				}
 			};
 
-			var updateAvailable = await App.Current.Installer.CheckForUpdate();
-			if (App.Current.Installer.IsInstalled && updateAvailable)
+			status.Items.Clear();
+			if (installed)
 			{
-				var updateBox = new StackLayoutItem
-				{
-					Control = "An update is available.",
-					HorizontalAlignment = HorizontalAlignment.Center
-				};
-				control.Items.Add(updateBox);
-
-				updateButton.Visible = true;
-				Unhide();
+				var version = App.Current.Installer.GetInstalledVersion();
+				status.Items.Add($"OpenTabletDriver {version?.InstalledVersion} is installed.");
+				if (update)
+					this.status.Items.Add("An update is available.");
 			}
 			else
 			{
-				updateButton.Visible = false;
+				status.Items.Add("OpenTabletDriver is not installed.");
 			}
 
-			if (App.Current.Installer.VersionInfoFile.Exists)
+			if (autostart & installed & !update)
 			{
-				using (var fs = App.Current.Installer.VersionInfoFile.OpenRead())
-				{
-					var ver = VersionInfo.Deserialize(fs);
-					var versionCtrl = new StackLayoutItem
-					{
-						Control = ver.InstalledVersion,
-						HorizontalAlignment = HorizontalAlignment.Center
-					};
-					control.Items.Add(versionCtrl);
-				}
+				Start();
 			}
-			
-			view.Content = control;
+		}
 
-			installButton.Text = App.Current.Installer.IsInstalled ? "Uninstall" : "Install";
-			startButton.Visible = App.Current.Installer.IsInstalled;
+		private Button startButton, installButton, uninstallButton, updateButton;
+		private StackLayout status;
 
-			if (App.Current.Installer.IsInstalled && !updateAvailable && triggerStart)
-				StartDriver();
+		public async Task Install(bool isUpdate = false)
+		{
+			using (new DisabledControls(startButton, installButton, uninstallButton, updateButton))
+			{
+				var installProgress = new ProgressBar
+				{
+					MinValue = 0,
+					MaxValue = 100
+				};
+				App.Current.Installer.ProgressChanged += (sender, progress) => installProgress.Value = (int)(100 * progress);
+				SetStatus("Installing...", installProgress);
+
+				if (!await App.Current.Installer.InstallBinaries())
+				{
+					var rateLimit = await Downloader.GetRateLimit();
+					var resetTime = rateLimit.Resources.Core.Reset.ToLocalTime().DateTime;
+					await ShowRateLimitError(isUpdate ? "update" : "install", resetTime);
+				}
+				UpdateControls();
+			}
+		}
+
+		public void Uninstall()
+		{
+			using (new DisabledControls(startButton, installButton, uninstallButton, updateButton))
+			{
+				var uninstallProgress = new ProgressBar
+				{
+					MinValue = 0,
+					MaxValue = 100
+				};
+				App.Current.Installer.ProgressChanged += (sender, progress) => uninstallProgress.Value = (int)(100 * progress);
+				SetStatus("Uninstalling...", uninstallProgress);
+
+				App.Current.Installer.DeleteBinaries();
+				UpdateControls();
+			}
+		}
+
+		private void SetStatus(params Control[] controls)
+		{
+			status.Items.Clear();
+			foreach (var control in controls)
+				status.Items.Add(control);
 		}
 
 		public void Hide()
@@ -226,14 +222,17 @@ namespace OpenTabletDriver.Installer
 			});
 		}
 
-		private async Task ShowRateLimitError(string action)
+		private async Task ShowRateLimitError(string action, DateTime resetTime)
 		{
 			var rateLimit = await Downloader.GetRateLimit();
-			var time = rateLimit.Resources.Core.Reset.ToLocalTime().DateTime.ToLongTimeString();
-			MessageBox.Show($"Failed to {action}: the API is currently rate limited until {time}. Try again then.", MessageBoxType.Warning);
+			MessageBox.Show(
+				$"Failed to {action} because you are currently rate limited on the GitHub API." + Environment.NewLine + 
+				$"You will be able to {action} after {resetTime}.",
+				MessageBoxType.Warning
+			);
 		}
 
-		private void StartDriver()
+		private void Start()
 		{
 			Hide();
 			App.Current.Launcher.Start();

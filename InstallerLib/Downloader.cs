@@ -12,11 +12,9 @@ namespace InstallerLib
 {
     public static class Downloader
     {
-        const string Owner = "InfinityGhost";
-        const string RepositoryName = "OpenTabletDriver";
         private static readonly GitHubClient Client = new GitHubClient(new ProductHeaderValue("OpenTabletDriver.Installer"));
 
-        const string PlatformFileFormat = "OpenTabletDriver.{0}.{1}";
+        private const string PlatformFileFormat = "OpenTabletDriver.{0}.{1}";
         internal static string PackageName => Platform.ActivePlatform switch
         {
             RuntimePlatform.Windows => string.Format(PlatformFileFormat, "win-x64", "zip"),
@@ -36,27 +34,24 @@ namespace InstallerLib
             return rateLimit.Resources.Core.Remaining > 5;
         }
 
-        public static async Task<Repository> GetRepository()
+        public static async Task<Repository> GetRepository(string name)
         {
-            return await Client.Repository.Get(Owner, RepositoryName);
+            return await Client.Repository.Get(GitHubInfo.Owner, name);
         }
 
-        public static async Task<Release> GetLatestRelease()
+        public static async Task<Release> GetLatestRelease(Repository repo)
         {
-            var repo = await GetRepository();
             var releases = await Client.Repository.Release.GetAll(repo.Id);
             return releases.First();
         }
 
-        public static async Task<Release> GetRelease(string tag)
+        public static async Task<Release> GetRelease(Repository repo, string tag)
         {
-            var repo = await GetRepository();
             return await Client.Repository.Release.Get(repo.Id, tag);
         }
 
-        public static async Task<ReleaseAsset> GetCurrentPlatformAsset(Release release)
+        public static async Task<ReleaseAsset> GetCurrentPlatformAsset(Repository repo, Release release)
         {
-            var repo = await GetRepository();
             var releases = await Client.Repository.Release.GetAllAssets(repo.Id, release.Id);
             return releases.FirstOrDefault(r => r.Name == PackageName);
         }
