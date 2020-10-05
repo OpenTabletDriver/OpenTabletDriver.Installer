@@ -36,7 +36,7 @@ namespace InstallerLib
         {
             RuntimePlatform.Windows => Path.Join(Environment.GetEnvironmentVariable("LOCALAPPDATA"), "OpenTabletDriver"),
             RuntimePlatform.Linux   => Path.Join(Environment.GetEnvironmentVariable("HOME"), ".config", "OpenTabletDriver"),
-            RuntimePlatform.MacOS   => Path.Join(Environment.GetEnvironmentVariable("HOME"), ""),
+            RuntimePlatform.MacOS   => Path.Join(Environment.GetEnvironmentVariable("HOME"), "Library", "Application Support", "OpenTabletDriver"),
             _                       => throw new PlatformNotSupportedException()
         };
     }
