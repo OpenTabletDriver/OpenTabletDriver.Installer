@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using ByteSizeLib;
+using InstallerLib.Info;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
 namespace InstallerLib.Tests

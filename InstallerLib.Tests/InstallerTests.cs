@@ -11,28 +11,46 @@ namespace InstallerLib.Tests
     {
         public InstallerTests()
         {
-            Installer = new AppInstaller(InstallationDirectory);
+            InstallationInfo.Current.AppdataDirectory = new DirectoryInfo(Path.Join(Directory.GetCurrentDirectory(), "test"));
+            Installer = new Installer();
         }
 
-        private AppInstaller Installer { set; get; }
-        private readonly DirectoryInfo InstallationDirectory = new DirectoryInfo(Path.Join(Directory.GetCurrentDirectory(), "test"));
+        private Installer Installer { set; get; }
 
         [TestMethod]
         public async Task Install()
         {
-            Console.WriteLine($"Installing binaries to '{InstallationDirectory}'...");
-            await Installer.InstallBinaries();
-            Debug.Assert(InstallationDirectory.Exists);
+            var installDir = InstallationInfo.Current.InstallationDirectory;
+            var configDir = InstallationInfo.Current.ConfigurationDirectory;
+
+            Console.WriteLine($"Installing binaries to '{installDir}'...");
+            await Installer.Install();
+
+            Debug.Assert(installDir.Exists);
+            Debug.Assert(configDir.Exists);
+
             Console.WriteLine($"Installation successful.");
         }
 
         [TestMethod]
         public void Uninstall()
         {
-            Console.WriteLine($"Uninstalling binaries in '{InstallationDirectory}'...");
-            Installer.DeleteBinaries();
-            Debug.Assert(!InstallationDirectory.Exists);
+            var installDir = InstallationInfo.Current.InstallationDirectory;
+            
+            Console.WriteLine($"Uninstalling binaries in '{installDir}'...");
+            Installer.Uninstall();
+            
+            Debug.Assert(!installDir.Exists);
+            
             Console.WriteLine($"Uninstallation successful.");
+        }
+
+        [TestMethod]
+        public void TestCreateDir()
+        {
+            var dir = new DirectoryInfo(Path.Join(Environment.GetEnvironmentVariable("HOME"), "test", "balls"));
+            dir.Create();
+            Debug.Assert(dir.Exists);
         }
     }
 }

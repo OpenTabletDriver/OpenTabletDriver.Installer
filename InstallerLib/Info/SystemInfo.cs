@@ -1,13 +1,12 @@
-﻿using System;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 
-namespace InstallerLib
+namespace InstallerLib.Info
 {
-    public static class Platform
+    public static class SystemInfo
     {
-        public static RuntimePlatform ActivePlatform
+        public static RuntimePlatform CurrentPlatform
         {
             get
             {
@@ -24,18 +23,18 @@ namespace InstallerLib
             }
         }
 
-        public static string ExecutableFileExtension => ActivePlatform switch
+        public static string ExecutableFileExtension => CurrentPlatform switch
         {
             RuntimePlatform.Windows => ".exe",
-            RuntimePlatform.MacOS   => ".app",
-            _                       => ""
+            RuntimePlatform.MacOS => ".app",
+            _ => ""
         };
 
         public static void Open(FileSystemInfo fsinfo) => Open(fsinfo.FullName);
 
         public static void Open(string path)
         {
-            switch (ActivePlatform)
+            switch (CurrentPlatform)
             {
                 case RuntimePlatform.Windows:
                     var startInfo = new ProcessStartInfo("cmd", $"/c start \"\" \"{path.Replace("&", "^&")}\"")

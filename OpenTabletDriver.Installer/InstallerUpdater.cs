@@ -1,9 +1,11 @@
 using System.Reflection;
 using System.Threading.Tasks;
+using InstallerLib;
+using InstallerLib.Info;
 
-namespace InstallerLib
+namespace OpenTabletDriver.Installer
 {
-    public static class InstallerInfo
+    public static class InstallerUpdater
     {
         public static async Task<bool> CheckForUpdate()
         {

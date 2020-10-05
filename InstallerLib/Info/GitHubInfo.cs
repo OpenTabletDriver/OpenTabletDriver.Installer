@@ -1,4 +1,4 @@
-﻿namespace InstallerLib
+﻿namespace InstallerLib.Info
 {
     public static class GitHubInfo
     {

@@ -1,11 +1,13 @@
 using System;
-using Eto.Forms;
-using Eto.Drawing;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Timers;
+using Eto.Drawing;
+using Eto.Forms;
 using InstallerLib;
+using InstallerLib.Info;
+using InstallerLib.Migration;
 using OpenTabletDriver.Installer.Tools;
-using System.Collections.Generic;
 
 namespace OpenTabletDriver.Installer
 {
@@ -15,7 +17,7 @@ namespace OpenTabletDriver.Installer
 		{
 			Title = "OpenTabletDriver Updater";
 			ClientSize = new Size(400, 350);
-			Icon = App.Current.Logo.WithSize(App.Current.Logo.Size);
+			Icon = App.Logo.WithSize(App.Logo.Size);
 
 			this.status = new StackLayout()
 			{
@@ -27,7 +29,7 @@ namespace OpenTabletDriver.Installer
 			};
 
 			var showFolder = new Command { MenuText = "Show install folder...", ToolBarText = "Show install folder" };
-			showFolder.Executed += (sender, e) => InstallerLib.Platform.Open(App.Current.InstallationDirectory);
+			showFolder.Executed += (sender, e) => SystemInfo.Open(InstallationInfo.Current.InstallationDirectory);
 
 			var quitCommand = new Command { MenuText = "Quit", Shortcut = Application.Instance.CommonModifier | Keys.Q };
 			quitCommand.Executed += (sender, e) => Application.Instance.Quit();
@@ -74,12 +76,13 @@ namespace OpenTabletDriver.Installer
 				QuitItem = quitCommand
 			};
 
+			PerformMigration();
 			UpdateControls(autostart: true);
 		}
 
 		public async void UpdateControls(bool autostart = false)
 		{
-			if (!shownInstallerUpdate && await InstallerInfo.CheckForUpdate())
+			if (!shownInstallerUpdate && await InstallerUpdater.CheckForUpdate())
 			{
 				var result = MessageBox.Show(
 					"An update is available for the installer." + Environment.NewLine +
@@ -91,7 +94,7 @@ namespace OpenTabletDriver.Installer
 				switch (result)
 				{
 					case DialogResult.Yes:
-						InstallerLib.Platform.Open(GitHubInfo.InstallerReleaseUrl);
+                        SystemInfo.Open(GitHubInfo.InstallerReleaseUrl);
 						Application.Instance.Quit();
 						break;
 				}
@@ -127,7 +130,7 @@ namespace OpenTabletDriver.Installer
 				Items =
 				{
 					new StackLayoutItem(null, true),
-					new StackLayoutItem(new Bitmap(App.Current.Logo.WithSize(128, 128)), HorizontalAlignment.Center),
+					new StackLayoutItem(new Bitmap(App.Logo.WithSize(128, 128)), HorizontalAlignment.Center),
 					new StackLayoutItem(status, HorizontalAlignment.Center),
 					new StackLayoutItem(buttonPanel, HorizontalAlignment.Center),
 					new StackLayoutItem(null, true)
@@ -153,6 +156,29 @@ namespace OpenTabletDriver.Installer
 			}
 		}
 
+		private void PerformMigration()
+		{
+			var binaryMigrator = new BinaryFolderMigrator();
+			if (binaryMigrator.NeedsMigration)
+			{
+				var result = MessageBox.Show(
+					binaryMigrator.MigrationPrompt,
+					"Migration",
+					MessageBoxButtons.YesNo,
+					MessageBoxType.Question
+				);
+				switch (result)
+				{
+					case DialogResult.Yes:
+						binaryMigrator.Migrate();
+						break;
+					default:
+						Environment.Exit(0);
+						break; 
+				}
+			}
+		}
+
 		private Button startButton, installButton, uninstallButton, updateButton;
 		private StackLayout status;
 		private bool shownInstallerUpdate;
@@ -169,7 +195,7 @@ namespace OpenTabletDriver.Installer
 				App.Current.Installer.ProgressChanged += (sender, progress) => installProgress.Value = (int)(100 * progress);
 				SetStatus("Installing...", installProgress);
 
-				if (!await App.Current.Installer.InstallBinaries())
+				if (!await App.Current.Installer.Install())
 				{
 					var rateLimit = await Downloader.GetRateLimit();
 					var resetTime = rateLimit.Resources.Core.Reset.ToLocalTime().DateTime;
@@ -191,7 +217,7 @@ namespace OpenTabletDriver.Installer
 				App.Current.Installer.ProgressChanged += (sender, progress) => uninstallProgress.Value = (int)(100 * progress);
 				SetStatus("Uninstalling...", uninstallProgress);
 
-				App.Current.Installer.DeleteBinaries();
+				App.Current.Installer.Uninstall();
 				UpdateControls();
 			}
 		}
