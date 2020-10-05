@@ -3,22 +3,20 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using ICSharpCode.SharpZipLib.Tar;
-using Octokit;
+using InstallerLib.Info;
 
 namespace InstallerLib
 {
-    public class AppInstaller : Progress<double>
+    public class Installer : Progress<double>
     {
-        public AppInstaller(DirectoryInfo installationDirectory)
+        public Installer()
         {
-            InstallationDirectory = installationDirectory;
         }
 
-        public DirectoryInfo InstallationDirectory { private set; get; }
-        public FileInfo VersionInfoFile => new FileInfo(Path.Join(InstallationDirectory.FullName, "versionInfo.json"));
+        public FileInfo VersionInfoFile => new FileInfo(Path.Join(InstallationInfo.Current.InstallationDirectory.FullName, "versionInfo.json"));
+        private DirectoryInfo InstallationDirectory => InstallationInfo.Current.InstallationDirectory;
 
         private const int BufferSize = 81920;
 
@@ -30,13 +28,11 @@ namespace InstallerLib
         /// Download, extract, and move all binary files from the latest GitHub release.
         /// </summary>
         /// <returns></returns>
-        public async Task<bool> InstallBinaries()
+        public async Task<bool> Install()
         {
             if (await Downloader.CheckIfCanDownload())
             {
-                if (InstallationDirectory.Exists)
-                    InstallationDirectory.Delete(true);
-                InstallationDirectory.Create();
+                CleanDirectory(InstallationDirectory);
 
                 var repo = await Downloader.GetRepository(GitHubInfo.MainRepository);
                 var release = await Downloader.GetLatestRelease(repo);
@@ -71,30 +67,29 @@ namespace InstallerLib
                             }
                         }
 
-                        var newDirectories = InstallationDirectory.GetDirectories();
-                        if (newDirectories.Length == 1)
+                        // Extraction can create a duplicate root directory, so we move everything out and delete the duplicate root.
+                        var children = InstallationDirectory.GetDirectories();
+                        if (!children.Any(d => d.Name == "Configurations") && children.Count() == 1)
                         {
-                            var directory = newDirectories.First();
-                            if (directory.Name != "Configurations")
+                            var parent = children.First();
+                            foreach (var fsinfo in parent.GetFileSystemInfos())
                             {
-                                foreach (var fsinfo in directory.GetFileSystemInfos())
-                                {
-                                    if (fsinfo is FileInfo file)
-                                        file.MoveTo(Path.Join(InstallationDirectory.FullName, file.Name));
-                                    else if (fsinfo is DirectoryInfo dir)
-                                        dir.MoveTo(Path.Join(InstallationDirectory.FullName, dir.Name));
-                                }
+                                if (fsinfo is FileInfo file)
+                                    file.MoveTo(Path.Join(InstallationDirectory.FullName, file.Name));
+                                else if (fsinfo is DirectoryInfo dir)
+                                    dir.MoveTo(Path.Join(InstallationDirectory.FullName, dir.Name));
                             }
-                            directory.Delete();
+                            parent.Delete();
                         }
 
                         var executables = from file in InstallationDirectory.EnumerateFiles()
                             where file.Name == Launcher.AppName || file.Name == Launcher.DaemonName || file.Name == Launcher.ConsoleName
                             select file;
 
+                        // Set file permissions on Unix platforms
                         foreach (var file in executables)
                         {
-                            switch (Platform.ActivePlatform)
+                            switch (SystemInfo.CurrentPlatform)
                             {
                                 case RuntimePlatform.Linux:
                                 case RuntimePlatform.MacOS:
@@ -119,45 +114,15 @@ namespace InstallerLib
             return false;
         }
 
-        private async Task CopyStreamWithProgress(int length, Stream source, Stream target)
-        {
-            var buffer = new byte[BufferSize];
-            int i = 0;
-            while (true)
-            {
-                this.OnReport((float)i / (float)length);
-
-                int bytesRead = await source.ReadAsync(buffer, 0, BufferSize);
-                if (bytesRead == 0)
-                    break;
-
-                await target.WriteAsync(buffer[0..bytesRead], 0, bytesRead);
-                i += BufferSize;
-            }
-
-            // Reset stream position
-            target.Position = 0;
-
-            // Report copy complete
-            this.OnReport(1f);
-        }
-
-        /// <summary>
+        /// <summary>CopyStreamWithProgress
         /// Remove all binaries associated with OpenTabletDriver.
         /// </summary>
-        public void DeleteBinaries()
+        public void Uninstall()
         {
-            var fsInfos = InstallationDirectory.GetFileSystemInfos("*", SearchOption.TopDirectoryOnly);
-            int i = 0;
-            foreach (var item in fsInfos)
-            {
-                if (item is DirectoryInfo dir)
-                    dir.Delete(true);
-                else if (item is FileInfo file)
-                    file.Delete();
-                i++;
-                OnReport(i / fsInfos.Length);
-            }
+            base.OnReport(0);
+            if (InstallationDirectory.Exists)
+                InstallationDirectory.Delete(true);
+            base.OnReport(1);
         }
 
         /// <summary>
@@ -199,6 +164,36 @@ namespace InstallerLib
             {
                 return true;
             }
+        }
+
+        private void CleanDirectory(DirectoryInfo directory)
+        {
+            if (directory.Exists)
+                directory.Delete(true);
+            directory.Create();
+        }
+
+        private async Task CopyStreamWithProgress(int length, Stream source, Stream target)
+        {
+            var buffer = new byte[BufferSize];
+            int i = 0;
+            while (true)
+            {
+                base.OnReport((float)i / (float)length);
+
+                int bytesRead = await source.ReadAsync(buffer, 0, BufferSize);
+                if (bytesRead == 0)
+                    break;
+
+                await target.WriteAsync(buffer[0..bytesRead], 0, bytesRead);
+                i += BufferSize;
+            }
+
+            // Reset stream position
+            target.Position = 0;
+
+            // Report copy complete
+            base.OnReport(1);
         }
     }
 }

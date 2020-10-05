@@ -10,11 +10,11 @@ namespace InstallerLib.Tests
     {
         public LauncherTests()
         {
-            Launcher = new Launcher(InstallationDirectory);
+            InstallationInfo.Current.AppdataDirectory = new DirectoryInfo(Path.Join(Directory.GetCurrentDirectory(), "test"));
+            Launcher = new Launcher();
         }
 
         public Launcher Launcher { private set; get; }
-        private readonly DirectoryInfo InstallationDirectory = new DirectoryInfo(Path.Join(Directory.GetCurrentDirectory(), "test"));
 
         public void StartProcesses()
         {

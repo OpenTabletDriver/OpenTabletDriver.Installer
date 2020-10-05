@@ -2,10 +2,8 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
+using InstallerLib.Info;
 using Octokit;
 
 namespace InstallerLib
@@ -15,7 +13,7 @@ namespace InstallerLib
         private static readonly GitHubClient Client = new GitHubClient(new ProductHeaderValue("OpenTabletDriver.Installer"));
 
         private const string PlatformFileFormat = "OpenTabletDriver.{0}.{1}";
-        internal static string PackageName => Platform.ActivePlatform switch
+        internal static string PackageName => SystemInfo.CurrentPlatform switch
         {
             RuntimePlatform.Windows => string.Format(PlatformFileFormat, "win-x64", "zip"),
             RuntimePlatform.Linux   => string.Format(PlatformFileFormat, "linux-x64", "tar.gz"),
