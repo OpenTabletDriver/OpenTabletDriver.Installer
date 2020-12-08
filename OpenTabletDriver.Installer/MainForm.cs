@@ -263,7 +263,7 @@ namespace OpenTabletDriver.Installer
 		private void Start()
 		{
 			Hide();
-			App.Current.Launcher.Start();
+			App.Current.Launcher.Start(App.Current.Arguments);
 			var watchdog = new Timer(TimeSpan.FromSeconds(1).TotalMilliseconds);
 			watchdog.Elapsed += (sender, e) => 
 			{

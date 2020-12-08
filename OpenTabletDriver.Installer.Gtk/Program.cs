@@ -8,6 +8,7 @@ namespace OpenTabletDriver.Installer.Gtk
 		[STAThread]
 		public static void Main(string[] args)
 		{
+			App.Current.Arguments = args;
 			new Application(Eto.Platforms.Gtk).Run(new MainForm());
 		}
 	}
