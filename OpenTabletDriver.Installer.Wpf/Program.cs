@@ -8,6 +8,7 @@ namespace OpenTabletDriver.Installer.Wpf
 		[STAThread]
 		public static void Main(string[] args)
 		{
+			App.Current.Arguments = args;
 			new Application(Eto.Platforms.Wpf).Run(new MainForm());
 		}
 	}

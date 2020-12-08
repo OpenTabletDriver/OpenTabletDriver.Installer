@@ -19,5 +19,6 @@ namespace OpenTabletDriver.Installer
 
         public Launcher Launcher { set; get; } = new Launcher();
         public InstallerLib.Installer Installer { set; get; } = new InstallerLib.Installer();
+        public string[] Arguments { set; get; } = { "" };
     }
 }
