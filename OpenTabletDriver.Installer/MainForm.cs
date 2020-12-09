@@ -192,8 +192,8 @@ namespace OpenTabletDriver.Installer
 					MinValue = 0,
 					MaxValue = 100
 				};
-				App.Current.Installer.ProgressChanged += (sender, progress) => installProgress.Value = (int)(100 * progress);
-				SetStatus("Installing...", installProgress);
+                App.Current.Installer.ProgressChanged += (sender, progress) => Application.Instance.AsyncInvoke(() => installProgress.Value = (int)(100 * progress));
+                SetStatus("Installing...", installProgress);
 
 				if (!await App.Current.Installer.Install())
 				{
@@ -214,7 +214,7 @@ namespace OpenTabletDriver.Installer
 					MinValue = 0,
 					MaxValue = 100
 				};
-				App.Current.Installer.ProgressChanged += (sender, progress) => uninstallProgress.Value = (int)(100 * progress);
+				App.Current.Installer.ProgressChanged += (sender, progress) => Application.Instance.AsyncInvoke(() => uninstallProgress.Value = (int)(100 * progress));
 				SetStatus("Uninstalling...", uninstallProgress);
 
 				App.Current.Installer.Uninstall();

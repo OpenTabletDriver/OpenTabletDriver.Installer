@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 using ICSharpCode.SharpZipLib.Tar;
 using InstallerLib.Info;
@@ -38,7 +40,7 @@ namespace InstallerLib
                 var release = await Downloader.GetLatestRelease(repo);
                 var asset = await Downloader.GetCurrentPlatformAsset(repo, release);
                 var extension = asset.Name.Split('.').Last();
-                
+
                 using (var httpStream = await Downloader.GetAssetStream(asset))
                 {
                     if (extension == "zip")
@@ -60,7 +62,7 @@ namespace InstallerLib
                         {
                             await CopyStreamWithProgress(asset.Size, httpStream, memoryStream);
                             using (var decompressionStream = new GZipStream(memoryStream, CompressionMode.Decompress))
-                            using (var tar = TarArchive.CreateInputTarArchive(decompressionStream))
+                            using (var tar = TarArchive.CreateInputTarArchive(decompressionStream, Encoding.Unicode))
                             {    
                                 // Extract to directory
                                 tar.ExtractContents(InstallationDirectory.FullName);
@@ -109,6 +111,22 @@ namespace InstallerLib
                 using (var fs = VersionInfoFile.OpenWrite())
                     versionInfo.Serialize(fs);
 
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                {
+                    var target = Path.Join(InstallationDirectory.FullName, Launcher.AppName + ".exe");
+                    var shortcut = "OpenTabletDriver.lnk";
+                    var desktop = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), shortcut);
+                    var startMenu = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), shortcut);
+                    var startup = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.Startup), shortcut);
+
+                    // If this is the second install and user deleted any of these shortcuts then left some, don't create shortcuts
+                    if (!File.Exists(desktop) && !File.Exists(startMenu) && !File.Exists(startup))
+                    {                       
+                        CreateShortcut(desktop, target);
+                        CreateShortcut(startMenu, target);
+                        CreateShortcut(startup, target);
+                    }
+                }
                 return true;
             }
             return false;
@@ -122,6 +140,7 @@ namespace InstallerLib
             base.OnReport(0);
             if (InstallationDirectory.Exists)
                 InstallationDirectory.Delete(true);
+            CleanShortcuts();
             base.OnReport(1);
         }
 
@@ -173,6 +192,20 @@ namespace InstallerLib
             directory.Create();
         }
 
+        private void CleanShortcuts()
+        {
+            var shortcut = "OpenTabletDriver.lnk";
+            var desktop = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), shortcut);
+            var startMenu = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), shortcut);
+            var startup = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.Startup), shortcut);
+            if (File.Exists(desktop))
+                File.Delete(desktop);
+            if (File.Exists(startMenu))
+                File.Delete(startMenu);
+            if (File.Exists(startup))
+                File.Delete(startup);
+        }
+
         private async Task CopyStreamWithProgress(int length, Stream source, Stream target)
         {
             var buffer = new byte[BufferSize];
@@ -181,12 +214,12 @@ namespace InstallerLib
             {
                 base.OnReport((float)i / (float)length);
 
-                int bytesRead = await source.ReadAsync(buffer, 0, BufferSize);
+                int bytesRead = await source.ReadAsync(buffer.AsMemory(0, BufferSize));
                 if (bytesRead == 0)
                     break;
 
-                await target.WriteAsync(buffer[0..bytesRead], 0, bytesRead);
-                i += BufferSize;
+                await target.WriteAsync(buffer[0..bytesRead].AsMemory(0, bytesRead));
+                i += bytesRead;
             }
 
             // Reset stream position
@@ -194,6 +227,23 @@ namespace InstallerLib
 
             // Report copy complete
             base.OnReport(1);
+        }
+
+        private void CreateShortcut(string shortcutPath, string targetPath)
+        {
+            string arg = "-NoProfile -Command " +
+                "$wShell = New-Object -ComObject WScript.Shell; " +
+                $"$Shortcut = $wShell.CreateShortcut('{shortcutPath}'); " +
+                $"$Shortcut.TargetPath = '{targetPath}'; " +
+                "$Shortcut.Save();";
+
+            var startInfo = new ProcessStartInfo("powershell", arg)
+            {
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            Process.Start(startInfo);
         }
     }
 }
