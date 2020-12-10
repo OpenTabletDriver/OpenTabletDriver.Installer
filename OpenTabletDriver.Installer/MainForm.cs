@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using System.Timers;
 using Eto.Drawing;
 using Eto.Forms;
 using InstallerLib;
@@ -75,6 +75,12 @@ namespace OpenTabletDriver.Installer
                 },
                 QuitItem = quitCommand
             };
+
+            if (App.Current.Arguments.Contains("--uninstall"))
+            {
+                Uninstall();
+                App.Current.Installer.SelfUninstall();
+            }
 
             PerformMigration();
             UpdateControls(autostart: true);
@@ -229,27 +235,6 @@ namespace OpenTabletDriver.Installer
                 status.Items.Add(control);
         }
 
-        public void Hide()
-        {
-            Application.Instance.AsyncInvoke(() => 
-            {
-                this.Minimize();
-                this.ShowInTaskbar = false;
-                this.Visible = false;
-            });
-        }
-
-        public void Unhide()
-        {
-            Application.Instance.AsyncInvoke(async () => 
-            {
-                this.Visible = true;
-                this.ShowInTaskbar = true;
-                await Task.Delay(100);
-                this.BringToFront();
-            });
-        }
-
         private async Task ShowRateLimitError(string action, DateTime resetTime)
         {
             var rateLimit = await Downloader.GetRateLimit();
@@ -262,19 +247,16 @@ namespace OpenTabletDriver.Installer
 
         private void Start()
         {
-            Hide();
-            App.Current.Launcher.Start(App.Current.Arguments);
-            var watchdog = new Timer(TimeSpan.FromSeconds(1).TotalMilliseconds);
-            watchdog.Elapsed += (sender, e) => 
+            if (App.Current.Arguments.Contains("--minimized"))
             {
-                if (App.Current.Launcher.AppProcess.Process.HasExited)
-                {
-                    watchdog.Stop();
-                    watchdog.Dispose();
-                    Unhide();
-                }
-            };
-            watchdog.Start();
+                var args = App.Current.Arguments.ToList();
+                args.Remove("--minimized");
+                App.Current.Launcher.Start(args.ToArray(), true);
+            }
+            else
+                App.Current.Launcher.Start(App.Current.Arguments);
+
+            Environment.Exit(0);
         }
     }
 }

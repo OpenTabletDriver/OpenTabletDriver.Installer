@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
@@ -111,22 +112,37 @@ namespace InstallerLib
                 using (var fs = VersionInfoFile.OpenWrite())
                     versionInfo.Serialize(fs);
 
+                var updaterDir = InstallationInfo.Current.UpdaterDirectory.FullName;
+                var updaterExecutable = Path.GetFileName(Assembly.GetEntryAssembly().Location).Replace(".dll", ".exe");
+                var updater = Path.Join(updaterDir, updaterExecutable);
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    var target = Path.Join(InstallationDirectory.FullName, Launcher.AppName + ".exe");
+                    var startMenuFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "OpenTabletDriver");
                     var shortcut = "OpenTabletDriver.lnk";
-                    var desktop = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), shortcut);
-                    var startMenu = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), shortcut);
-                    var startup = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.Startup), shortcut);
 
-                    // If this is the second install and user deleted any of these shortcuts then left some, don't create shortcuts
-                    if (!File.Exists(desktop) && !File.Exists(startMenu) && !File.Exists(startup))
-                    {                       
-                        CreateShortcut(desktop, target);
-                        CreateShortcut(startMenu, target);
-                        CreateShortcut(startup, target);
-                    }
+                    var desktop = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), shortcut);
+                    var startMenu = Path.Join(startMenuFolder, shortcut);
+                    var startup = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.Startup), shortcut);
+                    var uninstaller = Path.Join(startMenuFolder, "Uninstall.lnk");
+                    var otd = Path.Join(InstallationInfo.Current.InstallationDirectory.FullName, Launcher.AppName + ".exe");
+
+                    CleanShortcuts();
+                    Directory.CreateDirectory(startMenuFolder);
+                    CreateShortcut(desktop, updater);
+                    CreateShortcut(startMenu, updater);
+                    CreateShortcut(startup, updater, "--minimized", startMinimized: true);
+                    CreateShortcut(uninstaller, updater, "--uninstall");
+                    CreateShortcut(InstallationInfo.Current.OTDProxy.FullName, otd, startMinimized: true);
                 }
+
+                if (!Directory.Exists(updaterDir))
+                {
+                    Directory.CreateDirectory(updaterDir);
+                    CopyFolder(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), updaterDir);
+                    new Launcher().Start(Array.Empty<string>());
+                    Environment.Exit(0);
+                }
+
                 return true;
             }
             return false;
@@ -138,10 +154,34 @@ namespace InstallerLib
         public void Uninstall()
         {
             base.OnReport(0);
+
+            foreach (var process in Process.GetProcesses())
+            {
+                if (process.ProcessName == Launcher.AppName || process.ProcessName == Launcher.DaemonName)
+                    process.Kill();
+            }
+
             if (InstallationDirectory.Exists)
                 InstallationDirectory.Delete(true);
             CleanShortcuts();
             base.OnReport(1);
+        }
+
+        public void SelfUninstall()
+        {
+            // Defer updater removal to powershell
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                var args = "-NoProfile -Command" +
+                    "sleep 5; " +
+                    $"rmdir /S /Q {InstallationInfo.Current.UpdaterDirectory.FullName}";
+                var startInfo = new ProcessStartInfo("powershell", args)
+                {
+                    CreateNoWindow = true
+                };
+                Process.Start(startInfo);
+            }
+            Environment.Exit(0);
         }
 
         /// <summary>
@@ -194,16 +234,18 @@ namespace InstallerLib
 
         private void CleanShortcuts()
         {
+            var startMenuFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "OpenTabletDriver");
             var shortcut = "OpenTabletDriver.lnk";
             var desktop = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), shortcut);
-            var startMenu = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), shortcut);
             var startup = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.Startup), shortcut);
             if (File.Exists(desktop))
                 File.Delete(desktop);
-            if (File.Exists(startMenu))
-                File.Delete(startMenu);
             if (File.Exists(startup))
                 File.Delete(startup);
+            if (Directory.Exists(startMenuFolder))
+                Directory.Delete(startMenuFolder, true);
+            if (InstallationInfo.Current.OTDProxy.Exists)
+                InstallationInfo.Current.OTDProxy.Delete();
         }
 
         private async Task CopyStreamWithProgress(int length, Stream source, Stream target)
@@ -229,13 +271,18 @@ namespace InstallerLib
             base.OnReport(1);
         }
 
-        private void CreateShortcut(string shortcutPath, string targetPath)
+        private void CreateShortcut(string shortcutPath, string targetPath, string args = null, bool startMinimized = false)
         {
             string arg = "-NoProfile -Command " +
                 "$wShell = New-Object -ComObject WScript.Shell; " +
                 $"$Shortcut = $wShell.CreateShortcut('{shortcutPath}'); " +
                 $"$Shortcut.TargetPath = '{targetPath}'; " +
-                "$Shortcut.Save();";
+                $"$Shortcut.WindowStyle = {(startMinimized ? 7 : 4)}; ";
+
+            if (args != null)
+                arg += $"$Shortcut.Arguments = '{args}'; ";
+
+            arg += "$Shortcut.Save();";
 
             var startInfo = new ProcessStartInfo("powershell", arg)
             {
@@ -244,6 +291,24 @@ namespace InstallerLib
             };
 
             Process.Start(startInfo);
+        }
+
+        public void CopyFolder(string sourceDirectory, string targetDirectory)
+        {
+            var source = new DirectoryInfo(sourceDirectory);
+            var target = new DirectoryInfo(targetDirectory);
+
+            if (!target.Exists)
+                target.Create();
+
+            foreach (var file in source.GetFiles())
+                file.CopyTo(Path.Combine(target.FullName, file.Name), true);
+
+            foreach (var sourceSubDir in source.GetDirectories())
+            {
+                var targetSubDir = target.CreateSubdirectory(sourceSubDir.Name);
+                CopyFolder(sourceSubDir.FullName, targetSubDir.FullName);
+            }
         }
     }
 }
