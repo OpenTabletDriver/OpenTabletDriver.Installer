@@ -49,6 +49,11 @@ namespace InstallerLib
             }
         }
 
+        public void Start(params string[] args)
+        {
+            Start(AppArgs.Union(args).ToArray().ToArray());
+        }
+
         public void Stop()
         {
             if (AppProcess != null || AppProcess.IsRunning)

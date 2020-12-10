@@ -139,7 +139,7 @@ namespace InstallerLib
                 {
                     Directory.CreateDirectory(updaterDir);
                     CopyFolder(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), updaterDir);
-                    new Launcher().Start(Array.Empty<string>());
+                    new Launcher().Start();
                     Environment.Exit(0);
                 }
 
