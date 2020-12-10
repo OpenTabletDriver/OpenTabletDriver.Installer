@@ -173,8 +173,8 @@ namespace InstallerLib
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var args = "-NoProfile -Command" +
-                    "sleep 5; " +
-                    $"rmdir /S /Q {InstallationInfo.Current.UpdaterDirectory.FullName}";
+                    "Start-Sleep 5; " +
+                    $"Remove-Item -Recurse '{InstallationInfo.Current.UpdaterDirectory.FullName}';";
                 var startInfo = new ProcessStartInfo("powershell", args)
                 {
                     CreateNoWindow = true
@@ -254,7 +254,7 @@ namespace InstallerLib
             int i = 0;
             while (true)
             {
-                base.OnReport((float)i / (float)length);
+                base.OnReport((double)i / length);
 
                 int bytesRead = await source.ReadAsync(buffer.AsMemory(0, BufferSize));
                 if (bytesRead == 0)

@@ -27,7 +27,7 @@ namespace InstallerLib
         public ProcessHandler AppProcess { private set; get; }
         public string[] AppArgs { private set; get;}
 
-        public void Start(string[] args, bool hidden = false)
+        public void Start(string[] args, bool hidden)
         {
             if ((AppProcess == null || !AppProcess.IsRunning) && !hidden)
             {
@@ -51,7 +51,7 @@ namespace InstallerLib
 
         public void Start(params string[] args)
         {
-            Start(AppArgs.Union(args).ToArray().ToArray());
+            Start(AppArgs.Union(args).ToArray().ToArray(), false);
         }
 
         public void Stop()

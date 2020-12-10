@@ -205,7 +205,7 @@ namespace OpenTabletDriver.Installer
                 {
                     var rateLimit = await Downloader.GetRateLimit();
                     var resetTime = rateLimit.Resources.Core.Reset.ToLocalTime().DateTime;
-                    await ShowRateLimitError(isUpdate ? "update" : "install", resetTime);
+                    ShowRateLimitError(isUpdate ? "update" : "install", resetTime);
                 }
                 UpdateControls();
             }
@@ -235,9 +235,8 @@ namespace OpenTabletDriver.Installer
                 status.Items.Add(control);
         }
 
-        private async Task ShowRateLimitError(string action, DateTime resetTime)
+        private void ShowRateLimitError(string action, DateTime resetTime)
         {
-            var rateLimit = await Downloader.GetRateLimit();
             MessageBox.Show(
                 $"Failed to {action} because you are currently rate limited on the GitHub API." + Environment.NewLine + 
                 $"You will be able to {action} after {resetTime}.",
