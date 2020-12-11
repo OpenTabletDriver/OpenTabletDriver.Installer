@@ -147,7 +147,7 @@ namespace InstallerLib
                         {
                             { "DisplayName", "OpenTabletDriver" },
                             { "DisplayVersion", release.TagName },
-                            { "DisplayIcon", InstallationDirectory.FullName },
+                            { "DisplayIcon", otd },
                             { "NoModify", "1" },
                             { "NoRepair", "1" },
                             { "UninstallString", $"\"{updater}\" --uninstall" }
