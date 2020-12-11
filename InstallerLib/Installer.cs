@@ -24,6 +24,7 @@ namespace InstallerLib
         private DirectoryInfo InstallationDirectory => InstallationInfo.Current.InstallationDirectory;
 
         private const int BufferSize = 81920;
+        private const string UNINSTALL_REG_KEY = @"HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\OpenTabletDriver";
 
         public bool IsInstalled => VersionInfoFile.Exists;
 
@@ -140,9 +141,9 @@ namespace InstallerLib
                         WorkingDirectory: InstallationDirectory.FullName,
                         Minimized: true);
 
-                    var otdRegistry = new Registry(@"HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\OpenTabletDriver")
+                    var otdRegistry = new Registry(UNINSTALL_REG_KEY)
                     {
-                        Properties = new Dictionary<string, string>
+                        Values = new Dictionary<string, string>
                         {
                             { "DisplayName", "OpenTabletDriver" },
                             { "DisplayVersion", release.TagName },
@@ -190,7 +191,7 @@ namespace InstallerLib
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 CleanShortcuts();
-                Registry.Delete(@"HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\OpenTabletDriver");
+                Registry.Delete(UNINSTALL_REG_KEY);
             }
             base.OnReport(1);
         }

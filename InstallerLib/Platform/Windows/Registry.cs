@@ -6,7 +6,7 @@ namespace InstallerLib.Platform.Windows
     public class Registry
     {
         public string Key { get; }
-        public Dictionary<string, string> Properties;
+        public Dictionary<string, string> Values;
 
         public Registry(string registryKey)
         {
@@ -17,9 +17,9 @@ namespace InstallerLib.Platform.Windows
         {
             var cmd = new PowerShellCommand(true);
             cmd.Commands += $"New-Item {Key}";
-            if (Properties.Any())
+            if (Values.Any())
             {
-                cmd.Commands += from property in Properties
+                cmd.Commands += from property in Values
                     let cmdUnit = $"Set-ItemProperty -Path '{Key}' -Name '{property.Key}' -Value '{property.Value}'"
                     select cmdUnit;
             }
