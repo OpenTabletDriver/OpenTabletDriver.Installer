@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -9,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using ICSharpCode.SharpZipLib.Tar;
 using InstallerLib.Info;
+using InstallerLib.Platform.Windows;
 
 namespace InstallerLib
 {
@@ -124,15 +126,33 @@ namespace InstallerLib
                     var startMenu = Path.Join(startMenuFolder, shortcut);
                     var startup = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.Startup), shortcut);
                     var uninstaller = Path.Join(startMenuFolder, "Uninstall.lnk");
-                    var otd = Path.Join(InstallationInfo.Current.InstallationDirectory.FullName, Launcher.AppName + ".exe");
+                    var otd = Path.Join(InstallationDirectory.FullName, Launcher.AppName + ".exe");
 
                     CleanShortcuts();
                     Directory.CreateDirectory(startMenuFolder);
-                    CreateShortcut(desktop, updater);
-                    CreateShortcut(startMenu, updater);
-                    CreateShortcut(startup, updater, "--minimized", startMinimized: true);
-                    CreateShortcut(uninstaller, updater, "--uninstall");
-                    CreateShortcut(InstallationInfo.Current.OTDProxy.FullName, otd, startMinimized: true);
+                    Shortcut.Save(desktop, updater);
+                    Shortcut.Save(startMenu, updater);
+                    Shortcut.Save(startup, updater,
+                        Minimized: true);
+                    Shortcut.Save(uninstaller, updater,
+                        Arguments: "--uninstall");
+                    Shortcut.Save(InstallationInfo.Current.OTDProxy.FullName, otd,
+                        WorkingDirectory: InstallationDirectory.FullName,
+                        Minimized: true);
+
+                    var otdRegistry = new Registry(@"HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\OpenTabletDriver")
+                    {
+                        Properties = new Dictionary<string, string>
+                        {
+                            { "DisplayName", "OpenTabletDriver" },
+                            { "DisplayVersion", release.TagName },
+                            { "DisplayIcon", InstallationDirectory.FullName },
+                            { "NoModify", "1" },
+                            { "NoRepair", "1" },
+                            { "UninstallString", $"\"{updater}\" --uninstall" }
+                        }
+                    };
+                    otdRegistry.Save();
                 }
 
                 if (!Directory.Exists(updaterDir))
@@ -158,12 +178,20 @@ namespace InstallerLib
             foreach (var process in Process.GetProcesses())
             {
                 if (process.ProcessName == Launcher.AppName || process.ProcessName == Launcher.DaemonName)
+                {
                     process.Kill();
+                    process.WaitForExit();
+                }
             }
 
             if (InstallationDirectory.Exists)
                 InstallationDirectory.Delete(true);
-            CleanShortcuts();
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+            {
+                CleanShortcuts();
+                Registry.Delete(@"HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\OpenTabletDriver");
+            }
             base.OnReport(1);
         }
 
@@ -172,14 +200,13 @@ namespace InstallerLib
             // Defer updater removal to powershell
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
-                var args = "-NoProfile -Command" +
-                    "Start-Sleep 5; " +
-                    $"Remove-Item -Recurse '{InstallationInfo.Current.UpdaterDirectory.FullName}';";
-                var startInfo = new ProcessStartInfo("powershell", args)
+                var cmd = new PowerShellCommand();
+                cmd.Commands += new string[]
                 {
-                    CreateNoWindow = true
+                    "Start-Sleep 10",
+                    $"Remove-Item -Recurse '{InstallationInfo.Current.UpdaterDirectory.FullName}'"
                 };
-                Process.Start(startInfo);
+                cmd.Execute();
             }
             Environment.Exit(0);
         }
@@ -269,28 +296,6 @@ namespace InstallerLib
 
             // Report copy complete
             base.OnReport(1);
-        }
-
-        private void CreateShortcut(string shortcutPath, string targetPath, string args = null, bool startMinimized = false)
-        {
-            string arg = "-NoProfile -Command " +
-                "$wShell = New-Object -ComObject WScript.Shell; " +
-                $"$Shortcut = $wShell.CreateShortcut('{shortcutPath}'); " +
-                $"$Shortcut.TargetPath = '{targetPath}'; " +
-                $"$Shortcut.WindowStyle = {(startMinimized ? 7 : 4)}; ";
-
-            if (args != null)
-                arg += $"$Shortcut.Arguments = '{args}'; ";
-
-            arg += "$Shortcut.Save();";
-
-            var startInfo = new ProcessStartInfo("powershell", arg)
-            {
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            Process.Start(startInfo);
         }
 
         public void CopyFolder(string sourceDirectory, string targetDirectory)

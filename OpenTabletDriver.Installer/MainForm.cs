@@ -158,7 +158,10 @@ namespace OpenTabletDriver.Installer
 
             if (autostart & installed & !update)
             {
-                Start();
+                if (this.Loaded)
+                    Start();
+                else
+                    this.LoadComplete += (_, _) => Start();
             }
         }
 
@@ -246,11 +249,9 @@ namespace OpenTabletDriver.Installer
 
         private void Start()
         {
-            if (App.Current.Arguments.Contains("--minimized"))
+            if (this.WindowState == WindowState.Minimized)
             {
-                var args = App.Current.Arguments.ToList();
-                args.Remove("--minimized");
-                App.Current.Launcher.Start(args.ToArray(), true);
+                App.Current.Launcher.Start(App.Current.Arguments, true);
             }
             else
                 App.Current.Launcher.Start(App.Current.Arguments);
