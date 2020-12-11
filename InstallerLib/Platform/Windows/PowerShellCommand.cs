@@ -17,7 +17,7 @@ namespace InstallerLib.Platform.Windows
             this.AsAdmin = asAdmin;
         }
 
-        public void Execute()
+        public void Execute(bool wait = false)
         {
             var args = $"-Command {Commands.Aggregate((cmds, cmd) => cmds + "; " + cmd)};";
 
@@ -27,13 +27,16 @@ namespace InstallerLib.Platform.Windows
                 {
                     UseShellExecute = AsAdmin,
                     Verb = AsAdmin ? "runas" : string.Empty,
-                    CreateNoWindow = true
+                    CreateNoWindow = !AsAdmin,
+                    WindowStyle = ProcessWindowStyle.Hidden
                 }
             };
 
             try
             {
                 powershell.Start();
+                if (wait)
+                    powershell.WaitForExit();
             }
             catch (Win32Exception e) when (e.NativeErrorCode == 1223)
             {
