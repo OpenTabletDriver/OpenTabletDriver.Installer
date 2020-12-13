@@ -14,21 +14,11 @@ jobs:
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 5.0.100-rc.2.20479.15
+          dotnet-version: 5.0.x
       - name: Windows Publish
-        env:
-          runtime: win-x64
-          framework: net5
-        run: |
-          dotnet publish OpenTabletDriver.Installer.Wpf --configuration Release --runtime $ENV:runtime --self-contained false --framework $ENV:framework-windows -o build/Wpf
-          dotnet publish OpenTabletDriver.Installer.Gtk --configuration Release --runtime $ENV:runtime --self-contained false --framework $ENV:framework -o build/Gtk
+        run: dotnet publish OpenTabletDriver.Installer.Wpf --configuration Release --runtime win-x64 --self-contained false --framework net5-windows -o build
       - name: Upload Wpf artifacts
         uses: actions/upload-artifact@master
         with:
-          name: OpenTabletDriver.Installer Wpf
-          path: build/Wpf
-      - name: Upload Gtk artifacts
-        uses: actions/upload-artifact@master
-        with:
-          name: OpenTabletDriver.Installer Gtk
-          path: build/Gtk
+          name: OpenTabletDriver.Installer
+          path: build
