@@ -1,0 +1,34 @@
+name: .NET Core
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+jobs:
+  windowspublish:
+    runs-on: windows-latest
+    name: Windows Publish
+    steps:
+      - uses: actions/checkout@v1
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.100-rc.2.20479.15
+      - name: Windows Publish
+        env:
+          runtime: win-x64
+          framework: net5
+        run: |
+          dotnet publish OpenTabletDriver.Installer.Wpf --configuration Release --runtime $ENV:runtime --self-contained false --framework $ENV:framework-windows -o build/Wpf
+          dotnet publish OpenTabletDriver.Installer.Gtk --configuration Release --runtime $ENV:runtime --self-contained false --framework $ENV:framework -o build/Gtk
+      - name: Upload Wpf artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: OpenTabletDriver.Installer Wpf
+          path: build/Wpf
+      - name: Upload Gtk artifacts
+        uses: actions/upload-artifact@master
+        with:
+          name: OpenTabletDriver.Installer Gtk
+          path: build/Gtk
