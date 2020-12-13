@@ -16,7 +16,7 @@ jobs:
         with:
           dotnet-version: 5.0.x
       - name: Windows Publish
-        run: dotnet publish OpenTabletDriver.Installer.Wpf --configuration Release --runtime win-x64 --self-contained false --framework net5-windows -o build
+        run: dotnet publish OpenTabletDriver.Installer.Wpf --configuration Release -p:PublishSingleFile=true -p:DebugType=embedded --self-contained false --runtime win-x64 --framework net5-windows -o build
       - name: Upload Wpf artifacts
         uses: actions/upload-artifact@master
         with:
