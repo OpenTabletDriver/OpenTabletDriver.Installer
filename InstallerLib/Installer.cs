@@ -137,9 +137,6 @@ namespace InstallerLib
                         Minimized: true);
                     Shortcut.Save(uninstaller, updater,
                         Arguments: "--uninstall");
-                    Shortcut.Save(InstallationInfo.Current.OTDProxy.FullName, otd,
-                        WorkingDirectory: InstallationDirectory.FullName,
-                        Minimized: true);
 
                     var otdRegistry = new Registry(UNINSTALL_REG_KEY)
                     {
@@ -272,8 +269,6 @@ namespace InstallerLib
                 File.Delete(startup);
             if (Directory.Exists(startMenuFolder))
                 Directory.Delete(startMenuFolder, true);
-            if (InstallationInfo.Current.OTDProxy.Exists)
-                InstallationInfo.Current.OTDProxy.Delete();
         }
 
         private async Task CopyStreamWithProgress(int length, Stream source, Stream target)

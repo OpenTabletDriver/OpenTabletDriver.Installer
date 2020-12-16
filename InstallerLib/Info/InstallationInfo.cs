@@ -10,8 +10,6 @@ namespace InstallerLib
         
         private DirectoryInfo appdataDirectory, installationDirectory, updaterDirectory, configurationDirectory;
 
-        public FileInfo OTDProxy => new FileInfo(Path.Join(InstallationDirectory.FullName, "OpenTabletDriver.lnk"));
-
         public DirectoryInfo AppdataDirectory
         {
             set => this.appdataDirectory = value;

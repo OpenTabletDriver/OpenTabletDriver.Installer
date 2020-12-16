@@ -163,6 +163,10 @@ namespace OpenTabletDriver.Installer
                 else
                     this.LoadComplete += (_, _) => Start();
             }
+            else if (update)
+            {
+                this.Show();
+            }
         }
 
         private void PerformMigration()
@@ -251,7 +255,11 @@ namespace OpenTabletDriver.Installer
         {
             if (this.WindowState == WindowState.Minimized)
             {
-                App.Current.Launcher.Start(App.Current.Arguments, true);
+                string[] args = App.Current.Arguments;
+                if (!args.Contains("--minimized"))
+                    args = args.Append("--minimized").ToArray();
+
+                App.Current.Launcher.Start(args);
             }
             else
                 App.Current.Launcher.Start(App.Current.Arguments);

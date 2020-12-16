@@ -27,9 +27,9 @@ namespace InstallerLib
         public ProcessHandler AppProcess { private set; get; }
         public string[] AppArgs { private set; get;}
 
-        public void Start(string[] args, bool hidden)
+        public void Start(params string[] args)
         {
-            if ((AppProcess == null || !AppProcess.IsRunning) && !hidden)
+            if (AppProcess == null || !AppProcess.IsRunning)
             {
                 var appBinPath = Path.Join(
                     InstallationInfo.Current.InstallationDirectory.FullName,
@@ -39,19 +39,6 @@ namespace InstallerLib
                 AppProcess = new ProcessHandler(appBin);
                 AppProcess.Start(AppArgs.Union(args).ToArray());
             }
-            else if (hidden)
-            {
-                var startInfo = new ProcessStartInfo(InstallationInfo.Current.OTDProxy.FullName)
-                {
-                    UseShellExecute = true
-                };
-                Process.Start(startInfo);
-            }
-        }
-
-        public void Start(params string[] args)
-        {
-            Start(AppArgs.Union(args).ToArray().ToArray(), false);
         }
 
         public void Stop()
