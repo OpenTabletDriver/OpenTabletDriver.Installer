@@ -38,7 +38,7 @@ namespace InstallerLib
                 var release = await Downloader.GetLatestRelease(repo);
                 var asset = await Downloader.GetCurrentPlatformAsset(repo, release);
                 var extension = asset.Name.Split('.').Last();
-                
+
                 using (var httpStream = await Downloader.GetAssetStream(asset))
                 {
                     if (extension == "zip")
@@ -61,7 +61,7 @@ namespace InstallerLib
                             await CopyStreamWithProgress(asset.Size, httpStream, memoryStream);
                             using (var decompressionStream = new GZipStream(memoryStream, CompressionMode.Decompress))
                             using (var tar = TarArchive.CreateInputTarArchive(decompressionStream))
-                            {    
+                            {
                                 // Extract to directory
                                 tar.ExtractContents(InstallationDirectory.FullName);
                             }
@@ -148,16 +148,19 @@ namespace InstallerLib
                 using (var fs = VersionInfoFile.OpenRead())
                 {
                     var version = VersionInfo.Deserialize(fs);
-                    if (await Downloader.CheckIfCanDownload())
+                    try
                     {
-                        var repo = await Downloader.GetRepository(GitHubInfo.MainRepository);
-                        var release = await Downloader.GetLatestRelease(repo);
-                        return release.TagName != version.InstalledVersion;
+                        if (await Downloader.CheckIfCanDownload())
+                        {
+                            var repo = await Downloader.GetRepository(GitHubInfo.MainRepository);
+                            var release = await Downloader.GetLatestRelease(repo);
+                            return release.TagName != version.InstalledVersion;
+                        }
                     }
-                    else
+                    catch
                     {
-                        return false;
                     }
+                    return false;
                 }
             }
             else
