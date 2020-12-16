@@ -15,7 +15,7 @@ namespace InstallerLib.Platform.Windows
 
         public void Save()
         {
-            var cmd = new PowerShellCommand(true);
+            var cmd = new PowerShellCommand();
             cmd.Commands += $"New-Item {Key}";
             if (Values.Any())
             {

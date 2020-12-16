@@ -24,7 +24,7 @@ namespace InstallerLib
         private DirectoryInfo InstallationDirectory => InstallationInfo.Current.InstallationDirectory;
 
         private const int BufferSize = 81920;
-        private const string UNINSTALL_REG_KEY = @"HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\OpenTabletDriver";
+        private const string UNINSTALL_REG_KEY = @"HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\OpenTabletDriver";
 
         public bool IsInstalled => VersionInfoFile.Exists;
 
