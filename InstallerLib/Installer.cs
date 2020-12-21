@@ -133,10 +133,8 @@ namespace InstallerLib
                     Directory.CreateDirectory(startMenuFolder);
                     Shortcut.Save(desktop, updater);
                     Shortcut.Save(startMenu, updater);
-                    Shortcut.Save(startup, updater,
-                        Minimized: true);
-                    Shortcut.Save(uninstaller, updater,
-                        Arguments: "--uninstall");
+                    Shortcut.Save(startup, updater, Minimized: true);
+                    Shortcut.Save(uninstaller, updater, Arguments: "--uninstall");
 
                     var otdRegistry = new Registry(UNINSTALL_REG_KEY)
                     {
