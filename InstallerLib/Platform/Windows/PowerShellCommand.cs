@@ -1,5 +1,4 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -9,7 +8,7 @@ namespace InstallerLib.Platform.Windows
 {
     public class PowerShellCommand
     {
-        public CommandList Commands { get; set; } = new CommandList();
+        private readonly List<string> commands = new List<string>();
         public bool AsAdmin { get; set; }
 
         public PowerShellCommand(bool asAdmin = false)
@@ -17,9 +16,19 @@ namespace InstallerLib.Platform.Windows
             this.AsAdmin = asAdmin;
         }
 
+        public void AddCommands(params string[] commands)
+        {
+            this.commands.AddRange(commands);
+        }
+
+        public void AddCommands(IEnumerable<string> commands)
+        {
+            this.commands.AddRange(commands);
+        }
+
         public void Execute(bool wait = false)
         {
-            var args = $"-Command {Commands.Aggregate((cmds, cmd) => cmds + "; " + cmd)};";
+            var args = $"-Command {commands.Aggregate((cmds, cmd) => cmds + "; " + cmd)};";
 
             var powershell = new Process()
             {
@@ -41,41 +50,6 @@ namespace InstallerLib.Platform.Windows
             catch (Win32Exception e) when (e.NativeErrorCode == 1223)
             {
                 throw new OperationCanceledException();
-            }
-        }
-
-        public class CommandList : IEnumerable<string>
-        {
-            protected List<string> cmds = new List<string>();
-
-            public static CommandList operator +(CommandList cmdList, string cmd)
-            {
-                var newList = new CommandList
-                {
-                    cmds = new List<string>(cmdList.cmds)
-                };
-                newList.cmds.Add(cmd);
-                return newList;
-            }
-
-            public static CommandList operator +(CommandList cmdList, IEnumerable<string> cmds)
-            {
-                var newList = new CommandList
-                {
-                    cmds = new List<string>(cmdList)
-                };
-                newList.cmds.AddRange(cmds);
-                return newList;
-            }
-
-            public IEnumerator<string> GetEnumerator()
-            {
-                return ((IEnumerable<string>)cmds).GetEnumerator();
-            }
-
-            IEnumerator IEnumerable.GetEnumerator()
-            {
-                return ((IEnumerable)cmds).GetEnumerator();
             }
         }
     }

@@ -6,7 +6,7 @@ namespace InstallerLib.Platform.Windows
         public string Target { get; set; }
         public string WorkingDirectory { get; set; }
         public string Arguments { get; set; }
-        public bool Minimized { get; set; } = false;
+        public bool Minimized { get; set; }
 
         public Shortcut(string shortcutFile, string target)
         {
@@ -17,24 +17,23 @@ namespace InstallerLib.Platform.Windows
         public void Save()
         {
             var cmd = new PowerShellCommand();
-            cmd.Commands += new string[]
-            {
+            cmd.AddCommands(
                 "$wShell = New-Object -ComObject WScript.Shell",
                 $"$Shortcut = $wShell.CreateShortcut('{FullName}')",
                 $"$Shortcut.TargetPath = '{Target}'",
                 $"$Shortcut.WindowStyle = {(Minimized ? 7 : 4)}"
-            };
+            );
 
             if (!string.IsNullOrEmpty(WorkingDirectory))
-                cmd.Commands += $"$Shortcut.WorkingDirectory = '{WorkingDirectory}'";
+                cmd.AddCommands($"$Shortcut.WorkingDirectory = '{WorkingDirectory}'");
             if (!string.IsNullOrEmpty(Arguments))
-                cmd.Commands += $"$Shortcut.Arguments = '{Arguments}'";
+                cmd.AddCommands($"$Shortcut.Arguments = '{Arguments}'");
 
-            cmd.Commands += $"$Shortcut.Save()";
+            cmd.AddCommands($"$Shortcut.Save()");
             cmd.Execute();
         }
 
-        public static void Save(string FullName, string Target, string WorkingDirectory = null, string Arguments = null, bool Minimized = false)
+        public static void Create(string FullName, string Target, string WorkingDirectory = null, string Arguments = null, bool Minimized = false)
         {
             var shortcut = new Shortcut(FullName, Target)
             {

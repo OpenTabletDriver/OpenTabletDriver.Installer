@@ -16,10 +16,6 @@ namespace InstallerLib
 {
     public class Installer : Progress<double>
     {
-        public Installer()
-        {
-        }
-
         public FileInfo VersionInfoFile => new FileInfo(Path.Join(InstallationInfo.Current.InstallationDirectory.FullName, "versionInfo.json"));
         private DirectoryInfo InstallationDirectory => InstallationInfo.Current.InstallationDirectory;
 
@@ -120,21 +116,19 @@ namespace InstallerLib
                 var updater = Path.Join(updaterDir, updaterExecutable);
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    var startMenuFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "OpenTabletDriver");
+                    var startMenuFolder = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs");
                     var shortcut = "OpenTabletDriver.lnk";
 
                     var desktop = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), shortcut);
                     var startMenu = Path.Join(startMenuFolder, shortcut);
                     var startup = Path.Join(Environment.GetFolderPath(Environment.SpecialFolder.Startup), shortcut);
-                    var uninstaller = Path.Join(startMenuFolder, "Uninstall.lnk");
                     var otd = Path.Join(InstallationDirectory.FullName, Launcher.AppName + ".exe");
 
                     CleanShortcuts();
                     Directory.CreateDirectory(startMenuFolder);
-                    Shortcut.Save(desktop, updater);
-                    Shortcut.Save(startMenu, updater);
-                    Shortcut.Save(startup, updater, Minimized: true);
-                    Shortcut.Save(uninstaller, updater, Arguments: "--uninstall");
+                    Shortcut.Create(desktop, updater);
+                    Shortcut.Create(startMenu, updater);
+                    Shortcut.Create(startup, updater, Minimized: true);
 
                     var otdRegistry = new Registry(UNINSTALL_REG_KEY)
                     {
@@ -156,7 +150,6 @@ namespace InstallerLib
                     Directory.CreateDirectory(updaterDir);
                     CopyFolder(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), updaterDir);
                     new Launcher().Start();
-                    Environment.Exit(0);
                 }
 
                 return true;
@@ -197,11 +190,10 @@ namespace InstallerLib
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 var cmd = new PowerShellCommand();
-                cmd.Commands += new string[]
-                {
+                cmd.AddCommands(
                     "Start-Sleep 10",
                     $"Remove-Item -Recurse '{InstallationInfo.Current.UpdaterDirectory.FullName}'"
-                };
+                );
                 cmd.Execute();
             }
             Environment.Exit(0);

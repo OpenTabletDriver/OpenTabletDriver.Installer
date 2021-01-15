@@ -214,7 +214,7 @@ namespace OpenTabletDriver.Installer
                     var resetTime = rateLimit.Resources.Core.Reset.ToLocalTime().DateTime;
                     ShowRateLimitError(isUpdate ? "update" : "install", resetTime);
                 }
-                UpdateControls();
+                Environment.Exit(0);
             }
         }
 
