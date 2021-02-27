@@ -2,7 +2,7 @@
 {
     public static class GitHubInfo
     {
-        public const string Owner = "InfinityGhost";
+        public const string Owner = "OpenTabletDriver";
         public const string MainRepository = "OpenTabletDriver";
         public const string InstallerRepository = "OpenTabletDriver.Installer";
 
