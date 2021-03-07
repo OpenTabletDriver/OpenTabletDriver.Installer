@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using InstallerLib.Info;
@@ -9,7 +10,7 @@ namespace InstallerLib
     {
         public Launcher()
         {
-            AppArgs = new string[0];
+            AppArgs = Array.Empty<string>();
         }
 
         internal const string DaemonName = "OpenTabletDriver.Daemon";
@@ -34,8 +35,6 @@ namespace InstallerLib
                     InstallationInfo.Current.InstallationDirectory.FullName,
                     $"{AppName}{SystemInfo.ExecutableFileExtension}");
                 var appBin = new FileInfo(appBinPath);
-
-                AppArgs = new string[0];
 
                 AppProcess = new ProcessHandler(appBin);
                 AppProcess.Start(AppArgs.Union(args).ToArray());

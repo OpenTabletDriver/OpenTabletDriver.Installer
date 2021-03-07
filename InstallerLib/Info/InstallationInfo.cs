@@ -8,7 +8,7 @@ namespace InstallerLib
     {
         public static InstallationInfo Current { private set; get; } = new InstallationInfo();
         
-        private DirectoryInfo appdataDirectory, installationDirectory, configurationDirectory;
+        private DirectoryInfo appdataDirectory, installationDirectory, updaterDirectory, configurationDirectory;
 
         public DirectoryInfo AppdataDirectory
         {
@@ -22,6 +22,12 @@ namespace InstallerLib
             get => this.installationDirectory ?? new DirectoryInfo(this.defaultInstallationDirectory);
         }
 
+        public DirectoryInfo UpdaterDirectory
+        {
+            set => this.updaterDirectory = value;
+            get => this.updaterDirectory ?? new DirectoryInfo(this.defaultUpdaterDirectory);
+        }
+
         public DirectoryInfo ConfigurationDirectory
         {
             set => this.configurationDirectory = value;
@@ -29,6 +35,8 @@ namespace InstallerLib
         }
 
         private string defaultInstallationDirectory => Path.Join(AppdataDirectory.FullName, "bin");
+
+        private string defaultUpdaterDirectory => Path.Join(AppdataDirectory.FullName, "updater");
 
         private string defaultConfigurationDirectory => Path.Join(InstallationDirectory.FullName, "Configurations");
 
