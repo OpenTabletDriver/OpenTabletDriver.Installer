@@ -186,7 +186,7 @@ namespace InstallerLib
                     break;
 
                 await target.WriteAsync(buffer[0..bytesRead], 0, bytesRead);
-                i += BufferSize;
+                i += bytesRead;
             }
 
             // Reset stream position
